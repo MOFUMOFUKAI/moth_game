@@ -1,0 +1,1678 @@
+<!DOCTYPE html> 
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>MOTHVOID</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: white;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;  /* ← 縦方向いっぱいに使う */
+      overflow: hidden;
+    }
+    #titleScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 10;
+    }
+    #titleLogo {
+      width: 380px;
+      margin-bottom: 20px;
+    }
+    #pressToStart {
+      font-size: 20px;
+      color: #FFD700;
+      animation: blink 2s infinite;
+      font-family: 'monospace';
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    #time {
+      display: none;
+    }
+    #game {
+      position: relative;
+      width: 400px;
+      height: 600px;
+      background: #111;
+      border: 2px solid #fff;
+      overflow: hidden;
+    }
+    #player {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      bottom: 10px;
+      left: 180px;
+      background-image: url("chr_moth.gif");
+      background-size: cover;
+      z-index: 2;
+    }
+    #hitbox {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      bottom: 12px;
+      left: 182px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .obstacle {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: red;
+      z-index: 2;
+    }
+    .obstacle.stage4 {
+      background-color: #555;
+    }
+    .afterimage {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      pointer-events: none;
+      z-index: 2;
+      animation: fade .1s forwards;
+    }
+    .afterimage::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(0, 200, 255, 0.4) 0%, rgba(0, 200, 255, 0.0) 80%);
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(0, 200, 255, 0.3);
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+    @keyframes fade {
+      to { opacity: 0; }
+    }
+    .dodge-flare {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      top: 0;
+      left: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 200, 255, 0.4), rgba(0, 200, 255, 0));
+      pointer-events: none;
+      z-index: 1;
+    }
+    .heal {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      font-size: 28px;
+      color: pink;
+      text-align: center;
+      line-height: 40px;
+      pointer-events: none;
+    }
+    .explosion {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, orange, red, transparent);
+      animation: explode 0.4s ease-out forwards;
+      pointer-events: none;
+    }
+    .rainbow {
+      animation: rainbow 0.5s infinite;
+    }
+    @keyframes explode {
+     0% { opacity: 1; transform: scale(0.5); }
+     100% { opacity: 0; transform: scale(2); }
+    }
+    @keyframes rainbow {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+    .damage-flash {
+      animation: flashWhite 0.15s ease-in-out;
+    }
+    @keyframes flashWhite {
+      0% { filter: brightness(1); }
+      50% { filter: brightness(3); }
+      100% { filter: brightness(1); }
+    }
+   /* スコア・レベル・経験値（白枠外） */
+    #uiTop {
+      width: 400px;
+      margin-bottom: 10px;
+      color: white;
+      font-family: monospace;
+    }
+    #score {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    #levelExpRow {
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      padding: 0 10px;
+    }
+   /* ハート（ライフ表示）白枠内左上に表示 */
+    #lives {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 20px;
+      z-index: 5;
+    }
+    #gameClear, #gameOver {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: yellow;
+      background: rgba(0, 0, 0, 0.7);
+      font-size: 24px;
+      z-index: 10;
+    }
+    #thankYouText {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+    #timeRating {
+      font-size: 30px;
+      margin-bottom: 10px;
+    }
+    #credits {
+      font-size: 16px;
+    }
+    #restartButton {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: 75%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #f39c12;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      z-index: 20;
+      cursor: pointer;
+    }
+    #touchControls {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;  /* ← 下揃えに変更 */
+      width: 400px;
+      margin-top: 20px;
+      padding: 0 10px;
+      height: 80px;  /* ← 高さを固定 */
+      position: relative;
+    }
+    #moveInstruction,
+    #parryInstruction {
+      position: absolute;
+      bottom: 55px; /* ← ボタンより上に固定表示 */
+      font-size: 14px;
+      color: #FFD700;
+      font-family: monospace;
+      text-align: center;
+      width: 120px;
+      white-space: nowrap;
+    }
+    #moveInstruction {
+      left: 20px;
+    }
+    #parryInstruction {
+      right: 60px;
+    }
+    .arrowGroup {
+      display: flex;
+      gap: 30px;
+      margin-left: 30px; /* ← 矢印全体を右にずらす */
+    }
+    .parryGroup {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .control-button {
+      width: 50px;
+      height: 50px;
+    }
+    #btnParry {
+      margin-right: 70px; /* ← 右詰め調整 */
+      margin-top: 1px;   /* ← パリィだけさらに少し下に */
+    }
+
+    #screenFade {
+      position: absolute;
+      top: 0; left: 0;
+      width: 400px;
+      height: 600px;
+      background: #000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .75s ease;
+      z-index: 9;
+    }
+    #background {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("背景画像のパス");
+      background-size: 100% auto;
+      background-repeat: repeat-y;
+      background-position-y: 0px;
+      z-index: 0;
+    }
+
+    .obstacle-img {
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+    .score-popup {
+      position: absolute;
+      font-size: 18px;
+      font-weight: bold;
+      font-family: monospace;
+      pointer-events: none;
+      animation: floatUp 0.5s ease-out forwards;
+      z-index: 100;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translateY(0px);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- UIエリア（スコア、レベル、EXP） -->
+<div id="uiTop">
+  <div id="score">スコア: 0</div> <!-- 中央揃え -->
+
+  <div id="levelExpRow">
+    <span id="level">Lv.1</span>
+    <span id="exp">EXP: 0 / 200</span>
+  </div>
+</div>
+<div id="time" style="display: none;">タイム: 0.000秒</div>
+<!-- タイトル画面 -->
+<div id="titleScreen">
+  <img src="title_mothvoid.png" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
+  <p id="pressToStart">PRESS ANY BUTTON</p>
+</div>
+  <!-- ゲーム画面 -->
+  <div id="game">
+    <div id="background"></div>
+    <div id="player"></div>
+    <div id="hitbox"></div>
+    <div id="lives">❤️❤️❤️</div>
+    <div id="screenFade"></div>
+     <!-- エフェクト -->
+    <img id="justParryEffect" src="eff_just_parry.gif"
+       style="display: none; position: absolute; width: 60px; height: 60px; z-index: 3; pointer-events: none;">
+    <!-- BGM -->
+    <audio id="bgm_stage1" loop><source src="bgm_stage1.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm_stage2" loop><source src="bgm_stage2.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm_stage3" loop><source src="bgm_stage3.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm_final" loop><source src="bgm_final.mp3" type="audio/mpeg"></audio>
+    <!-- SE -->
+    <audio id="seParry"><source src="se_parry.mp3" type="audio/mpeg"></audio>
+    <audio id="seDodge"><source src="se_dodge.mp3" type="audio/mpeg"></audio>
+    <audio id="seBombL"><source src="se_bomb_L.mp3" type="audio/mpeg"></audio>
+    <audio id="seItem"><source src="se_item.mp3" type="audio/mpeg"></audio>
+    <audio id="seJustParry"><source src="se_justparry.mp3" type="audio/mpeg"></audio>
+    <!-- クリア画面 -->
+    <div id="gameClear">
+      <div>
+        <h2 id="thankYouText">Thank you for playing!</h2>
+        <p id="timeRating"></p>
+        <p id="credits">
+          <span>Director: akky</span><br>
+          <span>Designer: MAS</span><br>
+          <span>Programmer: GPT</span><br>
+          <span>MOTHVOID 2025/7/01</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- ゲームオーバー画面 -->
+    <div id="gameOver">
+      <h2>Game Over</h2>
+    </div>
+  </div>
+
+    <!-- タッチ操作ボタン -->
+<div id="touchControls" class="title-only">
+  <div class="arrowGroup">
+    <div id="moveInstruction" class="instruction title-only">左右移動／連続入力で回避</div>
+    <img id="btnLeft" src="btn_left.png" class="control-button">
+    <img id="btnRight" src="btn_right.png" class="control-button">
+  </div>
+  <div class="parryGroup">
+    <div id="parryInstruction" class="instruction title-only">パリィ／ジャストパリィ</div>
+    <img id="btnParry" src="btn_parry.png" class="control-button">
+  </div>
+
+  <button id="restartButton">再プレイ</button>
+
+<script>
+  const game = document.getElementById("game");
+  const player = document.getElementById("player");
+  const hitbox = document.getElementById("hitbox");
+  const scoreEl = document.getElementById("score");
+  const livesEl = document.getElementById("lives");
+  const timeEl = document.getElementById("time");
+  const levelEl = document.getElementById("level");
+  const expEl = document.getElementById("exp");
+  const gameClear = document.getElementById("gameClear");
+  const timeRatingEl = document.getElementById("timeRating");
+  const restartButton = document.getElementById("restartButton");
+  const bgmStage1 = document.getElementById("bgm_stage1");
+  const bgmStage2 = document.getElementById("bgm_stage2");
+  const bgmStage3 = document.getElementById("bgm_stage3");
+  const bgmFinal = document.getElementById("bgm_final");
+  const seParry = document.getElementById("seParry");
+  const seBombL = document.getElementById("seBombL");
+  const seDodge = document.getElementById("seDodge");
+  const seItem = document.getElementById("seItem");
+  const seJustParry = document.getElementById("seJustParry");
+  const btnLeft  = document.getElementById("btnLeft");
+  const btnRight = document.getElementById("btnRight");
+  const btnParry = document.getElementById("btnParry");
+
+  let score = 0;
+  let lives = 3;
+  let maxLives = 3;
+  let gameOver = false;
+  let invincible = false;
+  let parryActive = false;
+  let justParry = false;
+  let playerX = 180;
+  let playerSpeed = 3;
+  let obstacleSpeed = 15;  // 障害物の速度
+  let startTime = Date.now();  // ゲーム開始時の時間
+  let gameTime = 0;  // 経過時間（ミリ秒）
+  let lastScoreUpdateTime = 0;  // 最後にスコアを更新したミリ秒
+  let highScore = localStorage.getItem("highScore") || 0;
+  let parryGauge = 0;
+  const maxGauge = 3;
+  let level = 1;
+  let exp = 0;
+  const allObstacles = [];
+  let stage = 1;
+  let lastParryTime   = 0;   // 前回パリィを打ったタイムスタンプ
+  const PARRY_COOLDOWN = 600; // クールダウン時間 [ms]
+  let firstInteraction = false;
+  let currentBGM = null;
+  let gameStarted = false;
+  let gamePaused = false;
+  const scrollDuration = 120; // 背景スクロール速度（秒）
+  let baseInterval   = 800;  // ★ 現在の間隔（初期 800ms）
+  let obstacleTimerId      = null; // ★ setInterval の ID を保持
+  let obstacleSpawnInterval = null;
+
+  // 回避移動関連の変数
+  let lastKey        = "";      // 直前の方向キー
+  let lastKeyTime    = 0;       // 押下タイムスタンプ
+  let isDodging      = false;   // 回避モーション中
+  let speedBoost     = false;   // 回避後 0.3 s だけ 2 倍速
+  let keyPressed = {};  // 押下中かどうか
+
+  const DOUBLE_TAP_MS = 200;    // 0.2 秒以内
+  const STEP_PX       = 30;     // 1 ステップ距離
+
+/* =======================================================
+   ▼ ゲーム開始／再スタート処理（BGMフェードイン対応）
+   ======================================================= */
+
+// タイマーIDのグローバル定義
+let obstacleGenerationInterval;
+let scoreUpdateInterval;
+let timeUpdateInterval;
+
+// BGM フェードイン再生関数（volume 0 → 1）
+function fadeInBGM(audio, duration = 1000) {
+  const target = parseFloat(audio.dataset.targetVolume || 1);   // ★ 追加
+  audio.volume = 0;
+  audio.currentTime = 0;
+  audio.play().catch(console.warn);
+
+  const step = target / (duration / 50);
+  const id = setInterval(() => {
+    audio.volume = Math.min(target, audio.volume + step);        // ★ target まで
+    if (audio.volume >= target) {
+      clearInterval(id);
+      currentBGM = audio;
+    }
+  }, 50);
+}
+
+/* =======================================================
+   ▼ BGM クロスフェード ユーティリティ
+   ======================================================= */
+function crossfadeBGM(fromAudio, toAudio, duration = 1500) {
+  if (!fromAudio || !toAudio || fromAudio === toAudio) return;
+
+  const fromTarget = 0;
+  const toTarget   = parseFloat(toAudio.dataset.targetVolume || 1);  // ★ 追加
+
+  const stepTime = 50;
+  const steps    = duration / stepTime;
+  const fromStep = (fromAudio.volume - fromTarget) / steps;
+  const toStep   =  toTarget               / steps;
+
+  toAudio.volume = 0;
+  toAudio.currentTime = 0;
+  toAudio.play().catch(console.warn);
+
+  let n = 0;
+  const id = setInterval(() => {
+    n++;
+    fromAudio.volume = Math.max(fromTarget, fromAudio.volume - fromStep);
+    toAudio.volume   = Math.min(toTarget , toAudio.volume   + toStep );
+
+    if (n >= steps) {
+      clearInterval(id);
+      fromAudio.pause();
+      fromAudio.volume = parseFloat(fromAudio.dataset.targetVolume || 1);
+      currentBGM = toAudio;
+    }
+  }, stepTime);
+}
+
+/* =======================================================
+   ▼ 背景スクロール速度
+   ======================================================= */
+let backgroundOffset = 0;
+let scrollSpeed = 0.2; // ステージごとに変化する速度
+
+function scrollBackground() {
+  backgroundOffset += scrollSpeed;
+  const bg = document.getElementById("background");
+
+  // background-position-y を「%」ではなく「px」単位で扱い、自然なループに
+  bg.style.backgroundPositionY = `${backgroundOffset}px`;
+
+  requestAnimationFrame(scrollBackground);
+}
+
+function setStageBackgroundSpeed(stage) {
+  if (stage === 1) scrollSpeed = 0.3;
+  else if (stage === 2) scrollSpeed = 0.5;
+  else if (stage === 3) scrollSpeed = 0.8;
+  else if (stage === 4) scrollSpeed = 2.0;
+}
+
+/* =======================================================
+   ▼ 背景 & BGM クロスフェード付きステージ管理
+   ======================================================= */
+
+/** 背景‐BGM クロスフェードの所要時間（ms） */
+const FADE_MS = 1500;          // ←BGM の crossfadeBGM() と揃えています
+
+/**
+ * 暗転 → 背景画像切替 → 明転
+ * @param {number} nextStage 1〜4
+ */
+function crossfadeBackground(nextStage){
+  const bg    = document.getElementById("background");   // <div id="background">
+  const shade = document.getElementById("screenFade");   // <div id="screenFade">
+
+  /* --- 暗転開始 --- */
+  shade.style.transition = `opacity ${FADE_MS/2}ms ease`;
+  shade.style.opacity    = 1;
+
+  /* --- 暗転が半分終わったら画像差し替え、即・明転 --- */
+  setTimeout(()=>{
+    bg.style.backgroundImage = `url(env_stage${nextStage}.png)`; // 例: env_stage3.png
+    shade.style.opacity = 0;                                     // 明転
+  }, FADE_MS/2);
+}
+
+/* =======================================================
+   ▼ 背景情報更新
+   ======================================================= */
+function updateBackgroundInstant(stageNum) {
+  const bg = document.getElementById("background");
+
+  // 背景画像を即時切替
+  bg.style.backgroundImage = `url(env_stage${stageNum}.png)`; // 例: env_stage2.png
+
+  // 必要な初期スタイル再設定（念のためリセット）
+  bg.style.backgroundRepeat = "repeat-y";
+  bg.style.backgroundSize = "100% auto";
+  bg.style.backgroundPositionY = `${backgroundOffset}px`; // スクロール位置に合わせる
+}
+/* ──────────────────────────────────────────────
+     ステージ判定 &  ビジュアル/BGM 同期クロスフェード
+   ────────────────────────────────────────────── */
+function checkStage(){
+  const prev = stage;
+  stage =
+    score >= 150000 ? 4 :
+    score >= 100000 ? 3 :
+    score >=  50000 ? 2 : 1;
+
+  /* ─ ステージが変わったら ─ */
+  if (stage !== prev){
+
+    /* 背景をクロスフェード */
+    crossfadeBackground(stage);
+
+    /* BGM もクロスフェード */
+    const targetBGM = [bgmStage1, bgmStage2, bgmStage3, bgmFinal][stage - 1];
+
+    if (!currentBGM){
+      // 初回だけはボリューム 0→1 のフェードインで開始
+      fadeInBGM(targetBGM, FADE_MS);
+    }else if (currentBGM !== targetBGM){
+      crossfadeBGM(currentBGM, targetBGM, FADE_MS);
+    }
+
+    currentBGM = targetBGM;
+    setStageBackgroundSpeed(stage); // ← ここで背景スクロール速度を変更
+  }
+}
+
+
+/* =======================================================
+   ▼ メインゲーム開始処理
+   ======================================================= */
+function startGame() {
+  if (!gameOver && firstInteraction) return;
+  firstInteraction = true;
+    // タイトル画面非表示
+  const titleScreen = document.getElementById("titleScreen");
+  if (titleScreen) {
+    titleScreen.style.display = "none";
+    document.getElementById("moveInstruction").style.display = "none";
+    document.getElementById("parryInstruction").style.display = "none";
+  }
+  
+   allObstacles.forEach(obj => obj.remove());
+  allObstacles.length = 0;
+  scrollBackground();
+  
+  /* ★★★★★ ここから音量プリセット ★★★★★ */
+  const BGM_VOLUME = 0.7;   // ← 好みに合わせて数値を変える
+  const SE_VOLUME  = 0.8;   // ← SE 全般の基本音量
+
+  // 必要な SE が増えたら配列に追加して下さい
+  [seParry, seDodge, seBombL, seItem, seJustParry].forEach(se => se.volume = SE_VOLUME);
+
+  // BGM は fadeInBGM / crossfadeBGM 内で targetVolume を読むようにする
+  [bgmStage1, bgmStage2, bgmStage3, bgmFinal].forEach(bgm => {
+    bgm.dataset.targetVolume = BGM_VOLUME;   // <- 目標音量を記憶
+  });
+  /* ★★★★★ ここまで音量プリセット ★★★★★ */
+  
+  // 背景画像を即表示（ゲーム開始直後に1枚目を表示）
+  updateBackgroundInstant(1); 
+  
+  // 変数初期化
+  gameOver = false;
+  gameStarted = true; 
+  score = 0;
+  lives = maxLives = 3;
+  stage = 1;
+  parryGauge = 0;
+  startTime = Date.now();
+  resetObstacleSpawn(); // ← ここだけにする 
+
+  // UI 初期化
+  gameClear.style.display = "none";
+  restartButton.style.display = "none";
+  updateUI();
+
+  // BGM 初期化と再生
+  [bgmStage1, bgmStage2, bgmStage3, bgmFinal].forEach(bgm => {
+    bgm.pause();
+    bgm.currentTime = 0;
+    bgm.volume = 0;
+  });
+  bgmStage1.volume = 1;
+  currentBGM = bgmStage1;
+  fadeInBGM(currentBGM, 1000);
+
+  // タイマー再設定
+  clearInterval(obstacleGenerationInterval);
+  clearInterval(scoreUpdateInterval);
+  clearInterval(timeUpdateInterval);
+
+  scoreUpdateInterval = setInterval(updateScore, 100);
+  timeUpdateInterval = setInterval(updateTime, 30);
+}
+
+// 最初の入力で起動
+window.addEventListener("mousedown", startGame, { once: true });
+window.addEventListener("keydown",   startGame, { once: true });
+restartButton.addEventListener("click", startGame);
+
+// 再スタートボタン処理
+restartButton.addEventListener("click", startGame);
+
+/* =======================================================
+   ▼ 障害物作成リセット処理
+   ======================================================= */
+function resetObstacleSpawn() {
+  if (obstacleSpawnInterval !== null) {
+    clearInterval(obstacleSpawnInterval);
+    console.log("既存のspawnInterval停止");
+  }
+
+  obstacleSpawnInterval = setInterval(() => {
+    if (!gameOver) createObstacle();
+  }, baseInterval);
+
+  console.log(`[resetObstacleSpawn] baseInterval = ${baseInterval}`);
+}
+
+/* =======================================================
+   ▼ 障害物作成処理
+   ======================================================= */
+function createObstacle() {
+  if (gameOver) return;
+  const item = document.createElement("div");
+  item.classList.add("obstacle");
+
+  let sizeOption;
+  let colorClass = "";
+  let fallSpeed;
+
+  // speedScaleをscoreに基づいて計算
+  let speedScale = 1.0;
+  if (score >= 150000) {
+    const additionalScale = Math.min(Math.floor(score / 150000) * 1.5, 6.0);
+    speedScale += additionalScale;
+  }
+  speedScale = Math.min(speedScale, 10.0);
+
+  // ステージ別出現内容
+  if (stage === 1) {
+    sizeOption = Math.random() < 0.6 ? "small" : "big";
+    colorClass = "red";
+    fallSpeed = sizeOption === "small" ? 4 * speedScale : 3 * speedScale;
+  } else if (stage === 2) {
+    sizeOption = Math.random() < 0.7 ? "small" : "big";
+    colorClass = "blue";
+    fallSpeed = sizeOption === "small" ? 4 * speedScale : 5 * speedScale;
+  } else if (stage === 3) {
+    sizeOption = Math.random() < 0.8 ? "big" : "huge";
+    colorClass = "green";
+    fallSpeed = sizeOption === "big" ? 5 * speedScale : 2 * speedScale;
+  } else if (stage === 4) {
+    const randomChoice = Math.random();
+    if (randomChoice < 0.3) {
+      sizeOption = "huge";
+      colorClass = "red";
+      fallSpeed = 3 * speedScale;
+    } else if (randomChoice < 0.4) {
+      sizeOption = "huge";
+      colorClass = "blue";
+      fallSpeed = 2 * speedScale;
+    } else {
+      sizeOption = "small";
+      colorClass = "green";
+      fallSpeed = 6 * speedScale;
+    }
+    item.classList.add("stage4");
+  }
+
+  // ▼ GIF画像の表示
+  const img = document.createElement("img");
+  const sizeStr = sizeOption;
+  const colorInitial = colorClass[0].toUpperCase();
+  img.src = `enm_${sizeStr}_${colorInitial}.gif`;
+  img.className = "obstacle-img";
+
+  if (sizeOption === "small") {
+    img.style.width = "60px";
+    img.style.height = "60px";
+  } else if (sizeOption === "big") {
+    img.style.width = "100px";
+    img.style.height = "100px";
+  } else {
+    img.style.width = "180px";
+    img.style.height = "180px";
+  }
+
+  img.style.position = "absolute";
+  img.style.left = "50%";
+  img.style.top = "50%";
+  img.style.transform = "translate(-50%, -50%)";
+  img.style.pointerEvents = "none";
+  item.appendChild(img);
+
+  // 表示サイズ（ヒットボックスも定義）
+  if (sizeOption === "small") {
+    item.style.width = "60px";
+    item.style.height = "60px";
+    item.dataset.hitboxW = 60;
+    item.dataset.hitboxH = 60;
+  } else if (sizeOption === "big") {
+    item.style.width = "92px";
+    item.style.height = "92px";
+    item.dataset.hitboxW = 92;
+    item.dataset.hitboxH = 92;
+  } else if (sizeOption === "huge") {
+    item.style.width = "172px";
+    item.style.height = "172px";
+    item.dataset.hitboxW = 172;
+    item.dataset.hitboxH = 172;
+  }
+
+  item.style.background = "none";
+  item.style.backgroundColor = "transparent";
+
+  // コリジョン情報
+  const hp = sizeOption === "small" ? 1 : sizeOption === "big" ? 2 : 3;
+  item.dataset.hp = hp;
+  item.dataset.type = "damage";
+  item.dataset.stage = stage;
+
+  item.classList.add("obstacle");
+//item.classList.add("debug");
+
+  // 表示位置（40pxグリッド）
+  item.style.left = Math.floor(Math.random() * 9) * 40 + "px";
+  item.style.top = "0px";
+
+  game.appendChild(item);
+  allObstacles.push(item);
+
+  let y = 0;
+  const fall = setInterval(() => {
+    if (gameOver || !item.parentElement) return clearInterval(fall);
+    y += fallSpeed;
+    item.style.top = y + "px";
+
+    const playerRect = hitbox.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+
+    // パリィ判定
+    if (parryActive && item.dataset.type === "damage") {
+      if (checkCollision(playerRect, itemRect)) {
+        const isJust = justParry;
+        parryGauge++;
+        if (parryGauge > maxGauge) parryGauge = maxGauge;
+        reflectObstacle(item, isJust);
+        updateUI();
+        clearInterval(fall);
+        return;
+      }
+    }
+
+    // 通常ヒット
+    if (checkCollision(playerRect, itemRect)) {
+      if (!invincible) {
+        const dmg = parseInt(item.dataset.hp);
+        lives -= dmg;
+        if (lives <= 0) endGame();
+        setInvincible();
+      }
+      item.remove();
+      updateUI();
+      clearInterval(fall);
+      return;
+    }
+    // 画面外へでない
+    if (y > 600) {
+      item.remove();
+      clearInterval(fall);
+    }
+  }, 30);
+}
+
+/** ★ 指定ミリ秒で障害物生成タイマーを再セット */
+function setObstacleTimer(interval) {
+  clearInterval(obstacleTimerId);
+  obstacleTimerId = setInterval(() => {
+    if (!gameOver) createObstacle();
+  }, interval); // ← interval は baseInterval を受け取るはず
+}
+
+//初期障害物発生間隔
+/* ==== スコアに応じて生成間隔を更新 ==== */
+function startObstacleGeneration(){
+  // 初回起動
+  setObstacleTimer(800);
+}
+
+/** ★ スコア更新ごとに呼ぶ（updateScore 内の最後に１行追加すればＯＫ） */
+function updateObstacleIntervalByScore(score) {
+  const newInterval = Math.max(200, 800 - Math.floor(score / 200000) * 200); // ← これが必要！
+  const previousInterval = baseInterval;
+
+  if (newInterval !== baseInterval) {
+    baseInterval = newInterval;
+    console.log(`[スコア更新] score=${score}, baseInterval変更: ${previousInterval} → ${baseInterval}`);
+    resetObstacleSpawn();
+  }
+}
+
+/* =======================================================
+   ▼ ステージ進行
+   ======================================================= */
+function updateStage() {
+  const prev = stage;
+
+  if (score >= 150000) {
+    stage = 4;
+  } else if (score >= 100000) {
+    stage = 3;
+  } else if (score >=  50000) {
+    stage = 2;
+  } else {
+    stage = 1;
+  }
+
+  if (stage !== prev) {
+    crossfadeBackground(stage);          // 背景のクロスフェード
+    setStageBackgroundSpeed(stage);      // ⬅️ これを追加（スクロール速度切替）
+  }
+}
+
+/* =======================================================
+   ▼ プレイヤー行動処理
+   ======================================================= */
+// 回避移動関数
+function dodge(dir) {
+  if (isDodging) return;
+  isDodging = true;
+  speedBoost = true;
+    // 🔊 回避SEを再生
+  if (seDodge) {
+    seDodge.currentTime = 0;
+    seDodge.play();
+  }
+  setInvincible(300);  // 無敵時間
+  player.classList.add("dodging");
+
+  // 🔵 青い光をプレイヤーに追加
+  const flare = document.createElement("div");
+  flare.className = "dodge-flare";
+  player.appendChild(flare);
+
+  const startX = playerX;
+  spawnAfterImage(startX); // 1ステップ目の前
+
+  for (let i = 0; i < 2; i++) {
+    const delta = dir === "ArrowLeft" ? -STEP_PX : STEP_PX;
+    playerX = Math.max(0, Math.min(360, playerX + delta));
+    player.style.left = playerX + "px";
+    hitbox.style.left = (playerX + 4) + "px";
+
+    if (i === 0) spawnAfterImage(playerX); // 1ステップ後の残像
+  }
+
+  setTimeout(() => {
+    speedBoost = false;
+    isDodging = false;
+    player.classList.remove("dodging");
+    flare.remove(); // 🔵 青い光を除去
+  }, 300);
+}
+
+/* 残像生成 0.1 s */
+function spawnAfterImage(xPos){
+  const img = document.createElement("div");
+  img.className = "afterimage";
+  img.style.left = xPos + "px";
+  img.style.bottom = "10px";
+  img.style.backgroundImage = 'url("chr_moth.gif")';
+  img.style.backgroundSize = 'cover';
+  game.appendChild(img);
+  setTimeout(() => img.remove(), 100);
+}
+
+/* ★★★★★★★★★★  入力ハンドラここから  ★★★★★★★★★★
+   ──────────────────────────────────
+   - ⌨  ← → / A・D：押しっぱで通常移動、0.2s 以内の 2 回押しで dodge()
+   - 🖱  クリック  ：parry
+   - 🤚 タッチ     ：左・右・パリィ
+   ────────────────────────────────── */
+/* ────────────── ユーティリティ ────────────── */
+function stepMove(dir){
+  if (gameOver) return;
+  const delta = speedBoost ? playerSpeed * 2 : playerSpeed;
+
+  if (dir === "ArrowLeft")  playerX = Math.max(0,   playerX - delta);
+  if (dir === "ArrowRight") playerX = Math.min(360, playerX + delta);
+
+  player.style.left = playerX + "px";
+  hitbox.style.left = (playerX + 4) + "px";
+}
+
+function handleTap(dirKey){
+  const now = performance.now();
+
+  // ✨ 0.2s 以内の 2 回押し → dodge
+  if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS){
+    dodge(dirKey);
+    lastKey = "";                 // ダブルタップ判定をリセット
+  } else {
+    lastKey     = dirKey;
+    lastKeyTime = now;
+    stepMove(dirKey);             // 1 ステップ通常移動
+  }
+}
+
+/* ────────────── キーボード ────────────── */
+document.addEventListener("keydown", e=>{
+  if (gameOver) return;
+
+  const key = e.key;
+
+  /* 方向入力だけ扱う */
+  const isLeft  = key === "ArrowLeft"  || key === "a" || key === "A";
+  const isRight = key === "ArrowRight" || key === "d" || key === "D";
+  if (!isLeft && !isRight) return;
+
+  const dirKey = (isLeft ? "ArrowLeft" : "ArrowRight");
+  keyPressed[dirKey] = true;
+
+  if (e.repeat){
+    // OS キーリピート：ダブルタップ判定は行わず連続移動だけ
+    stepMove(dirKey);
+  } else {
+    handleTap(dirKey);            // 初回押下：通常 or ダブルタップ判定
+  }
+});
+
+document.addEventListener("keyup", e=>{
+  const key = e.key;
+  if (key === "ArrowLeft"  || key === "a" || key === "A") keyPressed["ArrowLeft"]  = false;
+  if (key === "ArrowRight" || key === "d" || key === "D") keyPressed["ArrowRight"] = false;
+});
+
+/* ────────────── クリック → パリィ ────────────── */
+game.addEventListener("mousedown", ()=>{
+  if (gameOver) return;
+  activateParry();
+});
+
+/* ────────────── タッチ UI ────────────── */
+btnLeft .addEventListener("touchstart", e=>{e.preventDefault(); handleTap("ArrowLeft"); });
+btnRight.addEventListener("touchstart", e=>{e.preventDefault(); handleTap("ArrowRight");});
+btnParry.addEventListener("touchstart", e=>{e.preventDefault(); activateParry();         });
+
+/* ────────────── 押しっぱ判定ループ ──────────────
+   30ms ごとに keyPressed を見て継続移動させる。
+   ダブルタップ判定には影響しない。                */
+setInterval(()=>{
+  if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
+  if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
+}, 30);
+
+/* ★★★★★★★★★★  入力ハンドラここまで  ★★★★★★★★★★ */
+
+  // タイムの更新（ミリ秒単位）
+  function updateTime() {
+    if (gameOver) return; // ゲームオーバー時にはタイム更新しない
+    gameTime = (Date.now() - startTime);  // ミリ秒単位で経過時間を取得
+    timeEl.innerHTML = `タイム: ${(gameTime / 1000).toFixed(3)}秒`;  // 小数点以下3桁で表示
+  }
+
+// スコアの更新 ─ 100ms ごとに +10 加算し整数で表示 & ステージ/BGM 判定も実施
+function updateScore() {
+  if (gameOver) return;                       // ゲームオーバー中は更新しない
+
+  const elapsed = Date.now() - startTime;     // 経過ミリ秒
+  const tick    = Math.floor(elapsed / 100);  // 100ms 単位のカウンタ
+
+  // 100ms 進んだらスコア加算
+  if (tick > lastScoreUpdateTime) {
+    lastScoreUpdateTime = tick;
+    score += 10;
+
+    /* ▼ ここでステージ切り替え & BGM クロスフェードを判定 */
+    if (typeof checkStage === "function") {
+      checkStage();   // ← 事前に追加した checkStage() を呼ぶ
+    }
+
+    // UI 反映（小数点以下なし）
+    scoreEl.textContent = "スコア: " + Math.floor(score);
+    updateObstacleIntervalByScore(score);
+  }
+}
+
+/* =======================================================
+   ▼ UIの更新処理
+   ======================================================= */
+function updateUI() {
+  // ハートの数表示（負のrepeat対策あり）
+  livesEl.innerHTML =
+    "❤️".repeat(Math.max(0, lives)) +
+    "🖤".repeat(Math.max(0, maxLives - lives));
+
+  // レベル表示
+  levelEl.textContent = "Lv. " + level;
+
+  // 経験値表示
+  if (level < 5) {
+    expEl.textContent = `EXP: ${exp} / ${level * 200}`;
+  } else {
+    expEl.textContent = `EXP: MAX`;
+  }
+
+  // スコア（必要に応じて）
+  scoreEl.textContent = "スコア: " + score;
+}
+
+/* =======================================================
+   ▼ 経験値追加
+   ======================================================= */
+function addExp(amount) {
+  if (level >= 5) return;
+  exp += amount;
+  let threshold = level * 200;
+
+  while (exp >= threshold && level < 5) {
+    exp -= threshold;
+    level++;
+    maxLives++;
+
+    // ライフを1増やすが、maxLivesを超えないようにする
+    lives = Math.min(lives + 1, maxLives);
+
+    // 成長効果
+    playerSpeed *= 1.05;
+
+    // 経験値再計算
+    threshold = level * 200;
+  }
+
+  updateUI(); // 忘れずにUI更新
+}
+/* =======================================================
+   ▼ パリィ/ジャストパリィ
+   ======================================================= */
+   function activateParry() {
+  // パリィの連射防止（クールダウンと発動中チェック）
+  if (parryActive || Date.now() - lastParryTime < PARRY_COOLDOWN) return;
+  lastParryTime = Date.now();
+
+  seParry.play();         // 効果音再生
+  setInvincible(350);     // 無敵時間（0.35秒）
+
+  parryActive = true;
+  justParry = false;
+
+  // 通常パリィエフェクト（eff_parry.gif）
+  const effect = document.createElement("img");
+  effect.src = "eff_parry.gif";
+  effect.style.position = "absolute";
+  effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 45) + "px";
+  effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 45) + "px";
+  effect.style.width = "90px";
+  effect.style.height = "90px";
+  effect.style.pointerEvents = "none";
+  effect.style.zIndex = "3";
+  game.appendChild(effect);
+
+  // 通常パリィは0.3秒表示 → ジャストでなければ削除
+  setTimeout(() => {
+    if (!justParry) effect.remove();
+  }, 300);
+
+  // ---------------- ② ジャストパリィ判定 ----------------
+  setTimeout(() => {
+    const pRect = player.getBoundingClientRect();
+    const pcx = (pRect.left + pRect.right) / 2;
+    const pcy = (pRect.top + pRect.bottom) / 2;
+
+    document.querySelectorAll(".obstacle").forEach(obs => {
+      const oRect = obs.getBoundingClientRect();
+
+      // プレイヤー中心から障害物のエッジまでの最短距離
+      const dx = Math.max(oRect.left - pcx, 0, pcx - oRect.right);
+      const dy = Math.max(oRect.top - pcy, 0, pcy - oRect.bottom);
+      const dist = Math.hypot(dx, dy);
+
+      if (!justParry && dist <= 45) {  // 判定距離：42px以内
+        justParry = true;
+
+        // eff_parry.gif を削除
+        effect.remove();
+        showJustParry();  // ← ここで呼ぶ
+        
+        // ---------------- ③ eff_just_parry.gif を表示 ----------------
+        const jSize = 60;
+        const j = document.createElement("img");
+        j.src = "eff_just_parry.gif";
+        j.style.position = "absolute";
+        j.style.left = (player.offsetLeft + player.offsetWidth / 2 - jSize / 2) + "px";
+        j.style.top = (player.offsetTop + player.offsetHeight / 2 - jSize / 2) + "px";
+        j.style.width = jSize + "px";
+        j.style.height = jSize + "px";
+        j.style.pointerEvents = "none";
+        j.style.zIndex = "3";
+        game.appendChild(j);
+        setTimeout(() => j.remove(), 600);
+      }
+    });
+  }, 80); // 判定タイミング
+
+  // ---------------- ④ クールダウン解除 ----------------
+  setTimeout(() => {
+    parryActive = false;
+    justParry = false;
+  }, PARRY_COOLDOWN);
+}
+
+/* ===== helper : eff_just_parry.gif を 0.6s だけ表示 ===== */
+function showJustParry() {
+  const justParryEffect = document.getElementById("justParryEffect");
+  if (!justParryEffect) return;
+
+  // 再生位置調整（中央に表示）
+  justParryEffect.style.display = "block";
+  justParryEffect.style.left = (player.offsetLeft + player.offsetWidth / 2 - justParryEffect.offsetWidth / 2) + "px";
+  justParryEffect.style.top  = (player.offsetTop + player.offsetHeight / 2 - justParryEffect.offsetHeight / 2) + "px";
+
+  // 🔊 SE再生（効果音）
+  if (typeof seJustParry !== "undefined" && seJustParry) {
+    seJustParry.currentTime = 0;
+    seJustParry.play().catch(e => console.warn("JustParry音再生失敗:", e));
+  }
+
+  // 0.5秒後に非表示
+  setTimeout(() => {
+    justParryEffect.style.display = "none";
+  }, 500);
+}
+
+/* =======================================================
+   ▼ 被ダメージ時の半透明処理
+   ======================================================= */
+  function setInvincible(duration = 1000) {
+    invincible = true;
+    player.style.opacity = "0.5";
+    setTimeout(() => {
+      invincible = false;
+      player.style.opacity = "1";
+    }, duration);
+  }
+
+/* =======================================================
+   ▼ 爆発発生処理
+   ======================================================= */
+function createExplosion(x, y, scoreValue = 0, isJust = false, noExplosion = false, expValue = 0) {
+  // ---------- 爆発エフェクト ----------
+  if (!noExplosion) {
+    const explosion = document.createElement("img");
+    explosion.src = "eff_bomb_L.gif";
+    explosion.style.position = "absolute";
+    explosion.style.left = x + "px";  // ← 余計な +20 削除
+    explosion.style.top  = y + "px";
+    explosion.style.width = "100px";
+    explosion.style.height = "100px";
+    explosion.style.transform = "translate(-50%, -50%)";
+    explosion.style.pointerEvents = "none";
+    explosion.style.zIndex = "10";
+    game.appendChild(explosion);
+      // 🔊 爆発音を再生
+  if (seBombL) {
+    seBombL.currentTime = 0;
+    seBombL.play();
+  }
+
+    setTimeout(() => explosion.remove(), 400);
+  }
+
+  // ---------- スコア + 経験値表示 ----------
+  if (scoreValue > 0) {
+    const scoreText = document.createElement("div");
+    scoreText.textContent = `+${scoreValue}${expValue > 0 ? `\nEXP+${expValue}` : ""}`;
+    scoreText.style.position = "absolute";
+    scoreText.style.left = x + "px";       // ← 余計な +20 削除
+    scoreText.style.top  = (y - 10) + "px";
+    scoreText.style.fontSize = "12px";     // ← 一段階小さく
+    scoreText.style.fontWeight = "bold";
+    scoreText.style.whiteSpace = "pre";    // 改行あり
+    scoreText.style.color = isJust ? "yellow" : "white";
+    scoreText.style.zIndex = "15";
+    scoreText.style.pointerEvents = "none";
+    scoreText.style.transform = "translate(-50%, 0px)";
+    game.appendChild(scoreText);
+
+    // 浮き上がって消えるアニメーション
+    let offset = 0;
+    const floatUp = setInterval(() => {
+      offset += 1;
+      scoreText.style.transform = `translate(-50%, -${offset}px)`;
+      if (offset > 50) {  // ← 表示時間 約2秒（40ms × 50）
+        clearInterval(floatUp);
+        scoreText.remove();
+      }
+    }, 40);
+  }
+}
+
+/* =======================================================
+   ▼ 障害物ダメージ表現
+   ======================================================= */
+  function applyHitFlash(obstacle) {
+  obstacle.classList.add("hit-effect");
+  setTimeout(() => {
+    obstacle.classList.remove("hit-effect");
+  }, 250);
+} 
+/* =======================================================
+   ▼ コリジョン判定
+   ======================================================= */
+  function checkCollision(r1, r2) {
+    return !(r1.top > r2.bottom || r1.bottom < r2.top || r1.left > r2.right || r1.right < r2.left);
+  }
+
+/* =======================================================
+   ▼ 障害物同士のコリジョン判定
+   ======================================================= */
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  return (
+    ax < bx + bw &&
+    ax + aw > bx &&
+    ay < by + bh &&
+    ay + ah > by
+  );
+}
+
+/* =======================================================
+   ▼ 反射処理（反射できる障害物に対して反射を行う）
+   ======================================================= */
+function reflectObstacle(obstacle, isRainbow) {
+  let hp = parseInt(obstacle.dataset.hp);
+  obstacle.dataset.type = "reflected";
+  obstacle.dataset.hp = hp;
+
+  let y = parseInt(obstacle.style.top);
+  let x = parseInt(obstacle.style.left);
+  let vy = -obstacleSpeed * (isRainbow ? 1.5 : 1);
+
+  if (isRainbow) obstacle.classList.add("rainbow");
+
+  // 拡大ヒットサイズをセット（500ms限定）
+  const originalW = obstacle.offsetWidth;
+  const originalH = obstacle.offsetHeight;
+  const expandedW = originalW * 1.2;
+  const expandedH = originalH * 1.2;
+  obstacle.dataset.hitboxW = expandedW;
+  obstacle.dataset.hitboxH = expandedH;
+
+  setTimeout(() => {
+    if (obstacle && obstacle.parentElement) {
+      obstacle.dataset.hitboxW = originalW;
+      obstacle.dataset.hitboxH = originalH;
+    }
+  }, 500);
+
+  const move = setInterval(() => {
+    if (!obstacle.parentElement) return clearInterval(move);
+
+    y += vy;
+    obstacle.style.top = y + "px";
+
+    const selfW = parseFloat(obstacle.dataset.hitboxW || originalW);
+    const selfH = parseFloat(obstacle.dataset.hitboxH || originalH);
+    const selfX = parseInt(obstacle.style.left);
+    const selfY = y;
+
+    for (let other of allObstacles) {
+      if (other === obstacle || !other.parentElement) continue;
+
+      const otherX = parseInt(other.style.left);
+      const otherY = parseInt(other.style.top);
+      const otherW = parseFloat(other.dataset.hitboxW || other.offsetWidth);
+      const otherH = parseFloat(other.dataset.hitboxH || other.offsetHeight);
+
+      if (!rectsOverlap(selfX, selfY, selfW, selfH, otherX, otherY, otherW, otherH)) {
+        continue;
+      }
+
+      const hp1 = parseInt(obstacle.dataset.hp);
+      const hp2 = parseInt(other.dataset.hp);
+      const stageType = parseInt(other.dataset.stage || 1);
+
+      let scoreAdd = 0;
+      let expAdd = 0;
+
+      if (stageType === 1 || stageType === 2) {
+        scoreAdd = hp2 === 2 ? 1500 : 1000;
+        expAdd = hp2 === 2 ? 15 : 10;
+      } else if (stageType === 3) {
+        scoreAdd = hp2 === 3 ? 2500 : 1000;
+        expAdd = hp2 === 3 ? 25 : 10;
+      } else if (stageType === 4) {
+        const imgSrc = other.querySelector("img")?.src || "";
+        if (hp2 === 3 && imgSrc.includes("enm_huge_B")) {
+          scoreAdd = 8000;
+          expAdd = 80;
+        } else if (hp2 === 3) {
+          scoreAdd = 5000;
+          expAdd = 50;
+        } else if (hp2 === 1) {
+          scoreAdd = 2000;
+          expAdd = 20;
+        }
+      }
+
+      if (isRainbow) {
+        // ジャストパリィ
+        score += scoreAdd * 2;
+        addExp(expAdd);
+        createExplosion(otherX, otherY, scoreAdd * 2, true, false, expAdd);
+        other.remove();
+      } else {
+        // 通常パリィ
+        if (hp1 === hp2) {
+          score += scoreAdd;
+          addExp(expAdd);
+          createExplosion(otherX, otherY, scoreAdd, false, false, expAdd);
+          obstacle.remove();
+          other.remove();
+          clearInterval(move);
+        } else if (hp1 > hp2) {
+          score += scoreAdd;
+          addExp(expAdd);
+          createExplosion(otherX, otherY, scoreAdd, false, false, expAdd);
+          obstacle.dataset.hp = hp1 - 1;
+          other.remove();
+        } else {
+          other.dataset.hp = hp2 - 1;
+          other.classList.add("damage-flash");
+          setTimeout(() => other.classList.remove("damage-flash"), 150);
+          obstacle.remove();
+          clearInterval(move);
+        }
+      }
+
+      updateUI();
+    }
+
+    if (y < 0) {
+      obstacle.remove();
+      clearInterval(move);
+    }
+  }, 30);
+}
+
+/* =======================================================
+   ▼ ゲームクリア時の評価判定
+   ======================================================= */
+function getTimeRating(score, time) {
+  const scorePerTime = score / time;  // スコア ÷ タイム（ミリ秒単位）
+let rating = '';
+  
+  // 評価基準（スコア ÷ タイム を1000分の1にした場合）
+  if (scorePerTime >= 3.2) {
+    rating = "S";
+  } else if (scorePerTime >= 2.8) {
+    rating = "A";
+  } else if (scorePerTime >= 2.4) {
+    rating = "B";
+  } else if (scorePerTime >= 2.0) {
+    rating = "C";
+  } else if (scorePerTime >= 1.6) {
+    rating = "D";
+  } else {
+    rating = "E";
+  }
+
+  return rating;
+}
+
+/* =======================================================
+   ▼ ゲームクリア処理
+   ======================================================= */
+function endGame() {
+  gameOver = true;
+
+  // BGM停止
+  bgmStage1.pause();
+  bgmStage2.pause();
+  bgmStage3.pause();
+  bgmFinal.pause();
+
+  // 既に追加されたGame Overテキストがあれば削除
+  const existingOver = document.getElementById("gameOverText");
+  if (existingOver) existingOver.remove();
+
+  clearInterval(obstacleTimerId);
+
+  // ゲームオーバー処理
+  if (score < 150000) {
+    const gameOverText = document.createElement("h2");
+    gameOverText.id = "gameOverText";   
+    gameOverText.textContent = "Game Over!";
+    gameOverText.style.color = "yellow";
+    gameOverText.style.marginTop = "200px";
+    game.appendChild(gameOverText);
+
+    gameClear.style.display = "none";
+    restartButton.style.display = "block";
+    restartButton.onclick = () => location.reload();
+
+  } else {
+    // ▼▼▼【ここに障害物削除処理を追加】▼▼▼
+    allObstacles.forEach(obj => obj.remove());
+    allObstacles.length = 0;
+
+    // ゲームクリア処理
+    const clearTime = (gameTime / 1000).toFixed(3);
+    const rating = getTimeRating(score, gameTime);
+
+    console.log("スコア:", score);
+    console.log("ゲームタイム（秒）:", clearTime);
+    console.log("スコア ÷ タイム:", score / gameTime);
+    console.log("評価:", rating);
+
+    timeRatingEl.textContent = `評価: ${rating}`;
+    gameClear.style.display = "flex";
+    restartButton.style.display = "block";
+    document.getElementById("thankYouText").style.display = "block";
+
+    // ゲームクリア後はstartGame()で再スタートできるようにする
+    restartButton.onclick = () => startGame();
+  }
+}
+
+
+  updateUI();
+setInterval(() => {
+  if (gameStarted && !gameOver) {
+    maybeSpawnHeart(); // ハート生成
+    maybeSpawnLemon(); // レモン生成
+    updateStage();
+  }
+}, 1000);
+
+/* =======================================================
+   ▼ ハート生成
+   ======================================================= */
+function maybeSpawnHeart() {
+  if (lives < maxLives && Math.random() < 0.05) {
+    const heart = document.createElement("div");
+    heart.classList.add("heal");
+    heart.textContent = "💗";
+    heart.style.left = Math.floor(Math.random() * 9) * 40 + "px";
+    heart.style.top = "0px";
+    game.appendChild(heart);
+
+    let heartY = 0;
+    const heartFall = setInterval(() => {
+      if (heartY > 600) {
+        heart.remove();
+        clearInterval(heartFall);
+        return;
+      }
+
+      heartY += 5;
+      heart.style.top = heartY + "px";
+
+      const heartRect = heart.getBoundingClientRect();
+      const playerRect = hitbox.getBoundingClientRect();
+
+      // 🎯 プレイヤーが取得した場合のみSEを鳴らす
+      if (checkCollision(heartRect, playerRect)) {
+        if (lives < maxLives) {
+          lives++;
+          heart.remove();
+
+          // ✅ ここだけで鳴らす
+          if (seItem) {
+            seItem.currentTime = 0;
+            seItem.play().catch(e => console.warn("アイテムSE再生エラー:", e));
+          }
+
+          updateUI();
+          clearInterval(heartFall);
+        }
+        return;
+      }
+
+      // ⚠️ 反射された障害物に当たった場合 → 破壊、SEは鳴らさない
+      for (let obstacle of allObstacles) {
+        const obstacleRect = obstacle.getBoundingClientRect();
+        if (checkCollision(heartRect, obstacleRect) && obstacle.dataset.type === "reflected") {
+          heart.remove();
+          clearInterval(heartFall);
+
+          // 🔥 エフェクトとSEだけ出す（必要ならここに explosion 音と画像）
+          createExplosion(
+            heartRect.left + heartRect.width / 2 - game.getBoundingClientRect().left,
+            heartRect.top + heartRect.height / 2 - game.getBoundingClientRect().top,
+            0, // スコアなし
+            false,
+            false // ← 爆発する
+          );
+
+          return;
+        }
+      }
+    }, 30);
+  }
+}
+
+
+/* =======================================================
+   ▼ レモン生成
+   ======================================================= */
+function maybeSpawnLemon() {
+  if (lives === maxLives && Math.random() < 0.03) {
+    const lemon = document.createElement("div");
+    lemon.classList.add("heal");
+    lemon.textContent = "🍋";
+    lemon.style.left = Math.floor(Math.random() * 9) * 40 + "px";
+    lemon.style.top = "0px";
+    game.appendChild(lemon);
+
+    let lemonY = 0;
+    const lemonFall = setInterval(() => {
+      if (lemonY > 600) {
+        lemon.remove();
+        clearInterval(lemonFall);
+        return;
+      }
+
+      lemonY += 5;
+      lemon.style.top = lemonY + "px";
+
+      const lemonRect = lemon.getBoundingClientRect();
+      const gameRect = game.getBoundingClientRect();
+      const lemonCenterX = lemonRect.left + lemonRect.width / 2 - gameRect.left;
+      const lemonCenterY = lemonRect.top + lemonRect.height / 2 - gameRect.top;
+
+      const playerRect = hitbox.getBoundingClientRect();
+
+      // 🎯 プレイヤーがレモンを取得した場合
+      if (checkCollision(lemonRect, playerRect)) {
+        const lemonScore = 10000;
+        const lemonExp = 300;
+
+        createExplosion(lemonCenterX, lemonCenterY, lemonScore, false, true, lemonExp);
+
+        score += lemonScore;
+        addExp(lemonExp);
+
+        // ✅ ここだけでアイテムSEを鳴らす
+        if (seItem) {
+          seItem.currentTime = 0;
+          seItem.play().catch(e => console.warn("アイテムSE再生エラー:", e));
+        }
+
+        lemon.remove();
+        updateUI();
+        clearInterval(lemonFall);
+        return;
+      }
+
+      // ⚠️ 反射された障害物に当たった場合のみ破壊（SEなし）
+      for (let obstacle of allObstacles) {
+        const obstacleRect = obstacle.getBoundingClientRect();
+        if (checkCollision(lemonRect, obstacleRect) && obstacle.dataset.type === "reflected") {
+          lemon.remove();
+          clearInterval(lemonFall);
+
+          // 🔥 爆発エフェクトとSE（アイテムSEは鳴らさない）
+          createExplosion(lemonCenterX, lemonCenterY);
+          return;
+        }
+      }
+
+      // 通常障害物に当たっても消えない（無視）
+    }, 30);
+  }
+}
+
+// === 1. アセット読み込み関数 ===
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+/* =======================================================
+   ▼ アイテム取得SE
+   ======================================================= */
+function loadAudio(audioEl) {
+  return new Promise((resolve, reject) => {
+    audioEl.oncanplaythrough = resolve;
+    audioEl.onerror = reject;
+    audioEl.load();
+  });
+}
+
+</script>
+</body>
+</html>
