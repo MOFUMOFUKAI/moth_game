@@ -978,17 +978,21 @@ function stepMove(dir){
   hitbox.style.left = (playerX + 4) + "px";
 }
 
+let isTouchHolding = false;
+
 function handleTap(dirKey){
   const now = performance.now();
 
-  // ✨ 0.2s 以内の 2 回押し → dodge
+  // 🛑 押しっぱ中はダブルタップを無視
+  if (isTouchHolding) return;
+
   if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS){
     dodge(dirKey);
-    lastKey = "";                 // ダブルタップ判定をリセット
+    lastKey = "";
   } else {
     lastKey     = dirKey;
     lastKeyTime = now;
-    stepMove(dirKey);             // 1 ステップ通常移動
+    stepMove(dirKey);
   }
 }
 
@@ -1031,6 +1035,7 @@ let touchHoldInterval = null;
 
 function startTouchHold(dirKey) {
   stopTouchHold(); // 前のループを止める
+  isTouchHolding = true;
   keyPressed[dirKey] = true;
   touchHoldInterval = setInterval(() => {
     stepMove(dirKey);
@@ -1038,6 +1043,7 @@ function startTouchHold(dirKey) {
 }
 
 function stopTouchHold() {
+  isTouchHolding = false;
   clearInterval(touchHoldInterval);
   keyPressed["ArrowLeft"] = false;
   keyPressed["ArrowRight"] = false;
@@ -1046,13 +1052,15 @@ function stopTouchHold() {
 // スマホ用移動ボタン（押しっぱ対応）
 btnLeft.addEventListener("touchstart", e => {
   e.preventDefault();
-  startTouchHold("ArrowLeft");
+  handleTap("ArrowLeft");        // ✨ タップ or 2回タップ判定
+  startTouchHold("ArrowLeft");   // ✨ 押しっぱ対応
 });
 btnLeft.addEventListener("touchend", stopTouchHold);
 btnLeft.addEventListener("touchcancel", stopTouchHold);
 
 btnRight.addEventListener("touchstart", e => {
   e.preventDefault();
+  handleTap("ArrowRight");
   startTouchHold("ArrowRight");
 });
 btnRight.addEventListener("touchend", stopTouchHold);
