@@ -1678,7 +1678,14 @@ function loadAudio(audioEl) {
     audioEl.load();
   });
 }
-
+/* =======================================================
+   ▼ スマホ自動拡大表示
+   ======================================================= */
+window.addEventListener("load", function () {
+  setTimeout(function () {
+    window.scrollTo(0, 1);
+  }, 100);
+});
 </script>
 </body>
 </html>
