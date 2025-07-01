@@ -1052,23 +1052,35 @@ function stopTouchHold() {
 // スマホ用移動ボタン（押しっぱ対応）
 btnLeft.addEventListener("touchstart", e => {
   e.preventDefault();
-  handleTap("ArrowLeft"); // ← タップ検出
+  isTouchHolding = false;
+  keyPressed["ArrowLeft"] = true;
+  handleTap("ArrowLeft");
 });
-
 btnLeft.addEventListener("touchend", () => {
-  startTouchHold("ArrowLeft");  // ← 押しっぱ開始は指を離した時点で
+  isTouchHolding = true;
+  keyPressed["ArrowLeft"] = false;
 });
-btnLeft.addEventListener("touchcancel", stopTouchHold);
+btnLeft.addEventListener("touchcancel", () => {
+  isTouchHolding = false;
+  keyPressed["ArrowLeft"] = false;
+});
 
 btnRight.addEventListener("touchstart", e => {
   e.preventDefault();
+  isTouchHolding = false;
+  keyPressed["ArrowRight"] = true;
   handleTap("ArrowRight");
 });
 
 btnRight.addEventListener("touchend", () => {
-  startTouchHold("ArrowRight");
+  isTouchHolding = true;
+  keyPressed["ArrowRight"] = false;
 });
-btnRight.addEventListener("touchcancel", stopTouchHold);
+
+btnRight.addEventListener("touchcancel", () => {
+  isTouchHolding = false;
+  keyPressed["ArrowRight"] = false;
+});
 
 // スマホ用パリィボタン（単発タップでOK）
 btnParry.addEventListener("touchstart", e => {
@@ -1079,9 +1091,9 @@ btnParry.addEventListener("touchstart", e => {
 /* ────────────── 押しっぱ判定ループ ──────────────
    30ms ごとに keyPressed を見て継続移動させる。
    ダブルタップ判定には影響しない。                */
-setInterval(()=>{
-  if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
-  if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
+setInterval(() => {
+  if (isTouchHolding && keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
+  if (isTouchHolding && keyPressed["ArrowRight"]) stepMove("ArrowRight");
 }, 30);
 
 /* ★★★★★★★★★★  入力ハンドラここまで  ★★★★★★★★★★ */
