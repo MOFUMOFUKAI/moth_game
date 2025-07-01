@@ -1027,9 +1027,42 @@ game.addEventListener("mousedown", ()=>{
 });
 
 /* ────────────── タッチ UI ────────────── */
-btnLeft .addEventListener("touchstart", e=>{e.preventDefault(); handleTap("ArrowLeft"); });
-btnRight.addEventListener("touchstart", e=>{e.preventDefault(); handleTap("ArrowRight");});
-btnParry.addEventListener("touchstart", e=>{e.preventDefault(); activateParry();         });
+let touchHoldInterval = null;
+
+function startTouchHold(dirKey) {
+  stopTouchHold(); // 前のループを止める
+  keyPressed[dirKey] = true;
+  touchHoldInterval = setInterval(() => {
+    stepMove(dirKey);
+  }, 30);
+}
+
+function stopTouchHold() {
+  clearInterval(touchHoldInterval);
+  keyPressed["ArrowLeft"] = false;
+  keyPressed["ArrowRight"] = false;
+}
+
+// スマホ用移動ボタン（押しっぱ対応）
+btnLeft.addEventListener("touchstart", e => {
+  e.preventDefault();
+  startTouchHold("ArrowLeft");
+});
+btnLeft.addEventListener("touchend", stopTouchHold);
+btnLeft.addEventListener("touchcancel", stopTouchHold);
+
+btnRight.addEventListener("touchstart", e => {
+  e.preventDefault();
+  startTouchHold("ArrowRight");
+});
+btnRight.addEventListener("touchend", stopTouchHold);
+btnRight.addEventListener("touchcancel", stopTouchHold);
+
+// スマホ用パリィボタン（単発タップでOK）
+btnParry.addEventListener("touchstart", e => {
+  e.preventDefault();
+  activateParry();
+});
 
 /* ────────────── 押しっぱ判定ループ ──────────────
    30ms ごとに keyPressed を見て継続移動させる。
