@@ -1033,6 +1033,23 @@ game.addEventListener("mousedown", ()=>{
 /* ────────────── タッチ UI ────────────── */
 let touchHoldInterval = null;
 
+function startTouchHold(dirKey) {
+  stopTouchHold(); // 前のループを止める
+  isTouchHolding = true; // ←追加
+  keyPressed[dirKey] = true;
+  touchHoldInterval = setInterval(() => {
+    stepMove(dirKey);
+  }, 30);
+}
+
+function stopTouchHold() {
+  clearInterval(touchHoldInterval);
+  touchHoldInterval = null;
+  keyPressed["ArrowLeft"] = false;
+  keyPressed["ArrowRight"] = false;
+  isTouchHolding = false; // ←追加
+}
+
 // スマホ用移動ボタン（押しっぱ対応）
 btnLeft.addEventListener("touchstart", e => {
   e.preventDefault();
