@@ -1018,16 +1018,21 @@ document.addEventListener("keydown", e => {
 
 document.addEventListener("keyup", e => {
   const key = e.key;
-  if (key === "ArrowLeft"  || key === "a" || key === "A") keyPressed["ArrowLeft"]  = false;
+  if (key === "ArrowLeft" || key === "a" || key === "A") keyPressed["ArrowLeft"] = false;
   if (key === "ArrowRight" || key === "d" || key === "D") keyPressed["ArrowRight"] = false;
 });
-
 // ────────────── クリック → パリィ（PC）──────────────
 game.addEventListener("mousedown", () => {
   if (gameOver) return;
   activateParry();
 });
 
+// タッチ操作でもパリィを発動できるようにする
+game.addEventListener("touchstart", e => {
+  e.preventDefault();  // スクロール防止
+  if (gameOver) return;
+  activateParry();
+});
 // ────────────── スマホ：押しっぱ＆タップ両対応 ──────────────
 function startTouchHold(dirKey) {
   isTouchHolding = true;
