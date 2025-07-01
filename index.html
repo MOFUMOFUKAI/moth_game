@@ -998,29 +998,39 @@ function handleTap(dirKey){
 }
 
 // ────────────── PCキーボード ──────────────
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", e=>{
   if (gameOver) return;
 
   const key = e.key;
+
+  /* 方向入力だけ扱う */
   const isLeft  = key === "ArrowLeft"  || key === "a" || key === "A";
   const isRight = key === "ArrowRight" || key === "d" || key === "D";
   if (!isLeft && !isRight) return;
 
-  const dirKey = isLeft ? "ArrowLeft" : "ArrowRight";
+  const dirKey = (isLeft ? "ArrowLeft" : "ArrowRight");
   keyPressed[dirKey] = true;
 
-  if (e.repeat) {
+  if (e.repeat){
+    // OS キーリピート：ダブルタップ判定は行わず連続移動だけ
     stepMove(dirKey);
   } else {
-    handleTap(dirKey);
+    handleTap(dirKey);            // 初回押下：通常 or ダブルタップ判定
   }
 });
 
-document.addEventListener("keyup", e => {
+document.addEventListener("keyup", e=>{
   const key = e.key;
-  if (key === "ArrowLeft" || key === "a" || key === "A") keyPressed["ArrowLeft"] = false;
+  if (key === "ArrowLeft"  || key === "a" || key === "A") keyPressed["ArrowLeft"]  = false;
   if (key === "ArrowRight" || key === "d" || key === "D") keyPressed["ArrowRight"] = false;
 });
+/* ────────────── 押しっぱ判定ループ ──────────────
+   30ms ごとに keyPressed を見て継続移動させる。
+   ダブルタップ判定には影響しない。                */
+setInterval(()=>{
+  if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
+  if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
+}, 30);
 // ────────────── クリック → パリィ（PC）──────────────
 game.addEventListener("mousedown", () => {
   if (gameOver) return;
