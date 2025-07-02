@@ -419,6 +419,7 @@
   const btnLeft  = document.getElementById("btnLeft");
   const btnRight = document.getElementById("btnRight");
   const btnParry = document.getElementById("btnParry");
+  const titleScreen = document.getElementById("titleScreen");
   
 
   let score = 0;
@@ -462,6 +463,9 @@
   const DOUBLE_TAP_MS = 200;    // 0.2 秒以内
   const STEP_PX       = 30;     // 1 ステップ距離
 
+window.addEventListener("load", () => {
+  if (bgm["bgm1"]) bgm["bgm1"].load(); // 読み込みだけしておく
+});
 /* =======================================================
    ▼ ゲーム開始／再スタート処理（BGMフェードイン対応）
    ======================================================= */
@@ -691,7 +695,9 @@ restartButton.addEventListener("click", startGame);
 
 // 再スタートボタン処理
 restartButton.addEventListener("click", startGame);
-
+titleScreen.addEventListener("touchstart", () => {
+  if (!gameStarted) startGame();
+});
 /* =======================================================
    ▼ 障害物作成リセット処理
    ======================================================= */
