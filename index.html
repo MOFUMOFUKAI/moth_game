@@ -20,6 +20,11 @@
       min-height: 100vh;  /* ← 縦方向いっぱいに使う */
       overflow: hidden;
     }
+    img, button {
+      -webkit-user-drag: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
     #titleScreen {
       position: absolute;
       top: 50%;
@@ -414,6 +419,7 @@
   const btnLeft  = document.getElementById("btnLeft");
   const btnRight = document.getElementById("btnRight");
   const btnParry = document.getElementById("btnParry");
+  
 
   let score = 0;
   let lives = 3;
@@ -965,9 +971,12 @@ function spawnAfterImage(xPos){
    - 🖱  クリック  ：parry
    - 🤚 タッチ     ：左・右・パリィ
    ────────────────────────────────── */
-/* ────────────── ユーティリティ ────────────── */
-let isTouchHolding = false;
 // ────────────── 共通移動処理 ──────────────
+// スマホでの長押しメニュー（画像保存など）を無効化
+document.addEventListener("contextmenu", e => e.preventDefault());
+let isTouchHolding = false;
+let touchHoldInterval = null;
+
 function stepMove(dir){
   if (gameOver) return;
   const delta = speedBoost ? playerSpeed * 2 : playerSpeed;
@@ -981,7 +990,7 @@ function stepMove(dir){
 
 function handleTap(dirKey){
   const now = performance.now();
-  if (isTouchHolding) return; // 押しっぱ中はダブルタップ判定なし
+  if (isTouchHolding) return; // 押しっぱ中はダブルタップ無視
 
   if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS){
     dodge(dirKey);
@@ -993,7 +1002,7 @@ function handleTap(dirKey){
   }
 }
 
-// ────────────── PCキーボード ──────────────
+// ────────────── PCキーボード操作 ──────────────
 document.addEventListener("keydown", e => {
   if (gameOver) return;
 
@@ -1014,27 +1023,28 @@ document.addEventListener("keydown", e => {
 
 document.addEventListener("keyup", e => {
   const key = e.key;
-  if (key === "ArrowLeft" || key === "a" || key === "A") keyPressed["ArrowLeft"] = false;
+  if (key === "ArrowLeft"  || key === "a" || key === "A") keyPressed["ArrowLeft"]  = false;
   if (key === "ArrowRight" || key === "d" || key === "D") keyPressed["ArrowRight"] = false;
 });
-// ────────────── クリック → パリィ（PC）──────────────
+
+// ────────────── PCクリック → パリィ ──────────────
 game.addEventListener("mousedown", () => {
   if (gameOver) return;
   activateParry();
 });
 
-// タッチ操作でもパリィを発動できるようにする
+// ────────────── スマホタッチパリィ ──────────────
 game.addEventListener("touchstart", e => {
-  e.preventDefault();  // スクロール防止
+  e.preventDefault();
   if (gameOver) return;
   activateParry();
 });
-// ────────────── スマホ：押しっぱ＆タップ両対応 ──────────────
+
+// ────────────── スマホ：押しっぱ＆タップ対応 ──────────────
 function startTouchHold(dirKey) {
   isTouchHolding = true;
   stopTouchHold();
   keyPressed[dirKey] = true;
-
   touchHoldInterval = setInterval(() => {
     stepMove(dirKey);
   }, 30);
@@ -1072,11 +1082,17 @@ btnRight.addEventListener("touchend", e => {
 });
 btnRight.addEventListener("touchcancel", stopTouchHold);
 
-// スマホ用パリィボタン（タップでOK）
+// スマホパリィボタン（タップ対応）
 btnParry.addEventListener("touchstart", e => {
   e.preventDefault();
   activateParry();
 });
+
+// ────────────── 押しっぱ移動ループ（スマホ/PC共通）──────────────
+setInterval(() => {
+  if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
+  if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
+}, 30);
 
 /* ★★★★★★★★★★  入力ハンドラここまで  ★★★★★★★★★★ */
 
