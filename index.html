@@ -966,26 +966,24 @@ function spawnAfterImage(xPos){
    - 🖱  クリック  ：parry
    - 🤚 タッチ     ：左・右・パリィ
    ────────────────────────────────── */
-/* ────────────── 入力ハンドラ統合 ────────────── */
+/* ────────────── ユーティリティ ────────────── */
 let isTouchHolding = false;
-let lastKey = "";
-let lastKeyTime = 0;
-const DOUBLE_TAP_MS = 200;
-let keyPressed = {};
-let touchHoldInterval = null;
-
+// ────────────── 共通移動処理 ──────────────
 function stepMove(dir){
   if (gameOver) return;
   const delta = speedBoost ? playerSpeed * 2 : playerSpeed;
+
   if (dir === "ArrowLeft")  playerX = Math.max(0,   playerX - delta);
   if (dir === "ArrowRight") playerX = Math.min(360, playerX + delta);
+
   player.style.left = playerX + "px";
   hitbox.style.left = (playerX + 4) + "px";
 }
 
 function handleTap(dirKey){
   const now = performance.now();
-  if (isTouchHolding) return;
+  if (isTouchHolding) return; // 押しっぱ中はダブルタップ判定なし
+
   if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS){
     dodge(dirKey);
     lastKey = "";
@@ -996,52 +994,64 @@ function handleTap(dirKey){
   }
 }
 
-// キーボード（PC）
-document.addEventListener("keydown", e => {
+// ────────────── PCキーボード ──────────────
+document.addEventListener("keydown", e=>{
   if (gameOver) return;
+
   const key = e.key;
-  const isLeft = key === "ArrowLeft" || key === "a" || key === "A";
+
+  /* 方向入力だけ扱う */
+  const isLeft  = key === "ArrowLeft"  || key === "a" || key === "A";
   const isRight = key === "ArrowRight" || key === "d" || key === "D";
   if (!isLeft && !isRight) return;
 
-  const dirKey = isLeft ? "ArrowLeft" : "ArrowRight";
+  const dirKey = (isLeft ? "ArrowLeft" : "ArrowRight");
   keyPressed[dirKey] = true;
 
-  if (e.repeat) {
-    stepMove(dirKey); // 連続移動
+  if (e.repeat){
+    // OS キーリピート：ダブルタップ判定は行わず連続移動だけ
+    stepMove(dirKey);
   } else {
-    handleTap(dirKey); // ダブルタップ or 単発移動
+    handleTap(dirKey);            // 初回押下：通常 or ダブルタップ判定
   }
 });
 
-document.addEventListener("keyup", e => {
+document.addEventListener("keyup", e=>{
   const key = e.key;
-  if (key === "ArrowLeft" || key === "a" || key === "A") keyPressed["ArrowLeft"] = false;
+  if (key === "ArrowLeft"  || key === "a" || key === "A") keyPressed["ArrowLeft"]  = false;
   if (key === "ArrowRight" || key === "d" || key === "D") keyPressed["ArrowRight"] = false;
 });
-
-// PC: クリックでパリィ
+/* ────────────── 押しっぱ判定ループ ──────────────
+   30ms ごとに keyPressed を見て継続移動させる。
+   ダブルタップ判定には影響しない。                */
+setInterval(()=>{
+  if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
+  if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
+}, 30);
+// ────────────── クリック → パリィ（PC）──────────────
 game.addEventListener("mousedown", () => {
   if (gameOver) return;
   activateParry();
 });
 
-// タッチ全体でパリィ（画面タップ）
+// タッチ操作でもパリィを発動できるようにする
 game.addEventListener("touchstart", e => {
+  e.preventDefault();  // スクロール防止
   if (gameOver) return;
-  e.preventDefault();
   activateParry();
 });
-
-// ───────── スマホ用ボタン ─────────
-function startTouchHold(dirKey){
-  stopTouchHold();
+// ────────────── スマホ：押しっぱ＆タップ両対応 ──────────────
+function startTouchHold(dirKey) {
   isTouchHolding = true;
+  stopTouchHold();
   keyPressed[dirKey] = true;
-  touchHoldInterval = setInterval(() => stepMove(dirKey), 30);
+
+  touchHoldInterval = setInterval(() => {
+    stepMove(dirKey);
+  }, 30);
 }
 
-function stopTouchHold(){
+function stopTouchHold() {
   clearInterval(touchHoldInterval);
   touchHoldInterval = null;
   isTouchHolding = false;
@@ -1052,33 +1062,32 @@ function stopTouchHold(){
 // 左ボタン
 btnLeft.addEventListener("touchstart", e => {
   e.preventDefault();
-  handleTap("ArrowLeft");
   startTouchHold("ArrowLeft");
 });
-btnLeft.addEventListener("touchend", stopTouchHold);
+btnLeft.addEventListener("touchend", e => {
+  e.preventDefault();
+  stopTouchHold();
+  handleTap("ArrowLeft");
+});
 btnLeft.addEventListener("touchcancel", stopTouchHold);
 
 // 右ボタン
 btnRight.addEventListener("touchstart", e => {
   e.preventDefault();
-  handleTap("ArrowRight");
   startTouchHold("ArrowRight");
 });
-btnRight.addEventListener("touchend", stopTouchHold);
+btnRight.addEventListener("touchend", e => {
+  e.preventDefault();
+  stopTouchHold();
+  handleTap("ArrowRight");
+});
 btnRight.addEventListener("touchcancel", stopTouchHold);
 
-// パリィボタン（スマホ）
+// スマホ用パリィボタン（タップでOK）
 btnParry.addEventListener("touchstart", e => {
   e.preventDefault();
   activateParry();
 });
-
-// 定期移動チェック（PC長押しにも対応）
-setInterval(() => {
-  if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
-  if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
-}, 30);
-
 
 /* ★★★★★★★★★★  入力ハンドラここまで  ★★★★★★★★★★ */
 
