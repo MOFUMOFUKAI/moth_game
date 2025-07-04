@@ -372,7 +372,7 @@
     <span id="exp">EXP: 0 / 200</span>
   </div>
      <!-- エフェクト -->
-    <img id="justParryEffect" src="eff_just_parry.gif"
+    <img id="justParryEffect" src="eff_just_parry.webp"
        style="display: none; position: absolute; width: 60px; height: 60px; z-index: 3; pointer-events: none;">
     <!-- BGM -->
     <audio id="bgm_stage1" loop><source src="bgm_stage1.mp3" type="audio/mpeg"></audio>
@@ -432,10 +432,6 @@
   const gameClear = document.getElementById("gameClear");
   const timeRatingEl = document.getElementById("timeRating");
   const restartButton = document.getElementById("restartButton");
-  const bgmStage1 = document.getElementById("bgm_stage1");
-  const bgmStage2 = document.getElementById("bgm_stage2");
-  const bgmStage3 = document.getElementById("bgm_stage3");
-  const bgmFinal = document.getElementById("bgm_final");
   const seParry = document.getElementById("seParry");
   const seBombL = document.getElementById("seBombL");
   const seDodge = document.getElementById("seDodge");
@@ -445,6 +441,12 @@
   const btnRight = document.getElementById("btnRight");
   const btnParry = document.getElementById("btnParry");
   const titleScreen = document.getElementById("titleScreen");
+  const bgm = {
+     Stage1: document.getElementById("bgm_stage1"),
+     Stage2: document.getElementById("bgm_stage2"),
+     Stage3: document.getElementById("bgm_stage3"),
+     Final:  document.getElementById("bgm_final")
+   };
   
 
   let score = 0;
@@ -489,7 +491,7 @@
   const STEP_PX       = 30;     // 1 ステップ距離
 
 window.addEventListener("load", () => {
-  if (bgm["bgm1"]) bgm["bgm1"].load(); // 読み込みだけしておく
+  if (bgm["stage1"]) bgm["stage1"].load(); // 読み込みだけしておく
 });
 /* =======================================================
    ▼ ゲーム開始／再スタート処理（BGMフェードイン対応）
@@ -594,7 +596,7 @@ function crossfadeBackground(nextStage){
 
   /* --- 暗転が半分終わったら画像差し替え、即・明転 --- */
   setTimeout(()=>{
-    bg.style.backgroundImage = `url(env_stage${nextStage}.png)`; // 例: env_stage3.png
+    bg.style.backgroundImage = `url(env_stage${nextStage}.webp)`; // 例: env_stage3.webp
     shade.style.opacity = 0;                                     // 明転
   }, FADE_MS/2);
 }
@@ -606,7 +608,7 @@ function updateBackgroundInstant(stageNum) {
   const bg = document.getElementById("background");
 
   // 背景画像を即時切替
-  bg.style.backgroundImage = `url(env_stage${stageNum}.png)`; // 例: env_stage2.png
+  bg.style.backgroundImage = `url(env_stage${stageNum}.webp)`; // 例: env_stage2.webp
 
   // 必要な初期スタイル再設定（念のためリセット）
   bg.style.backgroundRepeat = "repeat-y";
@@ -630,7 +632,7 @@ function checkStage(){
     crossfadeBackground(stage);
 
     /* BGM もクロスフェード */
-    const targetBGM = [bgmStage1, bgmStage2, bgmStage3, bgmFinal][stage - 1];
+    const targetBGM = [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final][stage - 1];
 
     if (!currentBGM){
       // 初回だけはボリューム 0→1 のフェードインで開始
@@ -671,7 +673,7 @@ function startGame() {
   [seParry, seDodge, seBombL, seItem, seJustParry].forEach(se => se.volume = SE_VOLUME);
 
   // BGM は fadeInBGM / crossfadeBGM 内で targetVolume を読むようにする
-  [bgmStage1, bgmStage2, bgmStage3, bgmFinal].forEach(bgm => {
+  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final].forEach(bgm => {
     bgm.dataset.targetVolume = BGM_VOLUME;   // <- 目標音量を記憶
   });
   /* ★★★★★ ここまで音量プリセット ★★★★★ */
@@ -695,13 +697,13 @@ function startGame() {
   updateUI();
 
   // BGM 初期化と再生
-  [bgmStage1, bgmStage2, bgmStage3, bgmFinal].forEach(bgm => {
+  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final].forEach(bgm => {
     bgm.pause();
     bgm.currentTime = 0;
     bgm.volume = 0;
   });
-  bgmStage1.volume = 1;
-  currentBGM = bgmStage1;
+  bgm.Stage1.volume = 1;
+  currentBGM = bgm.Stage1;
   fadeInBGM(currentBGM, 1000);
 
   // タイマー再設定
@@ -1219,9 +1221,9 @@ function addExp(amount) {
   parryActive = true;
   justParry = false;
 
-  // 通常パリィエフェクト（eff_parry.gif）
+  // 通常パリィエフェクト
   const effect = document.createElement("img");
-  effect.src = "eff_parry.gif";
+  effect.src = "eff_parry.webp";
   effect.style.position = "absolute";
   effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 45) + "px";
   effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 45) + "px";
@@ -1253,7 +1255,7 @@ function addExp(amount) {
       if (!justParry && dist <= 45) {  // 判定距離：42px以内
         justParry = true;
 
-        // eff_parry.gif を削除
+        // eff_parry.webpを削除
         effect.remove();
         showJustParry();  // ← ここで呼ぶ
         
@@ -1549,10 +1551,10 @@ function endGame() {
   gameOver = true;
 
   // BGM停止
-  bgmStage1.pause();
-  bgmStage2.pause();
-  bgmStage3.pause();
-  bgmFinal.pause();
+  bgm.Stage1.pause();
+  bgm.Stage2.pause();
+  bgm.Stage3.pause();
+  bgm.Final.pause();
 
   // 既に追加されたGame Overテキストがあれば削除
   const existingOver = document.getElementById("gameOverText");
@@ -1582,10 +1584,10 @@ function endGame() {
     const clearTime = (gameTime / 1000).toFixed(3);
     const rating = getTimeRating(score, gameTime);
 
-    console.log("スコア:", score);
-    console.log("ゲームタイム（秒）:", clearTime);
-    console.log("スコア ÷ タイム:", score / gameTime);
-    console.log("評価:", rating);
+//  console.log("スコア:", score);
+//  console.log("ゲームタイム（秒）:", clearTime);
+//  console.log("スコア ÷ タイム:", score / gameTime);
+//  console.log("評価:", rating);
 
     timeRatingEl.textContent = `評価: ${rating}`;
     gameClear.style.display = "flex";
