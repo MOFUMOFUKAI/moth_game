@@ -1575,6 +1575,7 @@ function endGame() {
 
     gameClear.style.display = "none";
     restartButton.style.display = "block";
+    restartButton.style.pointerEvents = "auto"; // スマホでも確実にタップ可能に
     restartButton.onclick = () => location.reload();
 
   } else {
