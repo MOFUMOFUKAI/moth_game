@@ -242,6 +242,7 @@
       z-index: 999;               /* 重なり順を最前面に調整 */
       cursor: pointer;
       pointer-events: auto;       /* タッチを確実に受け付ける */
+      touch-action: manipulation; /* ← タップ反応を最適化（特にiOS） */
     }
     #touchControls {
       display: flex;
@@ -724,6 +725,12 @@ restartButton.addEventListener("click", startGame);
 
 // 再スタートボタン処理
 restartButton.addEventListener("click", startGame);
+// 再スタートボタン処理（スマホ対応）← 追加
+restartButton.addEventListener("touchstart", (e) => {
+  e.preventDefault(); // iOSでのフォーカス・選択など防止
+  startGame();
+});
+// タイトル画面：スマホ対応
 titleScreen.addEventListener("touchstart", () => {
   if (!gameStarted) startGame();
 });
