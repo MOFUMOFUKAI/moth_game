@@ -187,6 +187,12 @@
      font-size: 12px;
      z-index: 10;
     }
+    #smartphoneHint {
+     color: white;
+     font-size: 0.85em;
+     margin-top: 10px;
+     line-height: 1.4;
+    }
     #lives {
       position: absolute;
       top: 5px;
@@ -343,6 +349,12 @@
 <div id="titleScreen">
   <img src="title_mothvoid.png" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
+  <p id="smartphoneHint" class="title-only">
+  ※スマホの場合<br>
+  「共有ボタン→ホーム画面に追加」<br>
+  その後ホーム画面のショートカットから<br>
+  プレイするのがおススメ！
+</p>
 </div>
 
 <!-- ゲーム画面 -->
@@ -390,6 +402,7 @@
     <div id="gameOver">
       <h2>Game Over</h2>
     </div>
+    <button id="restartButton">再プレイ</button>
   </div>
 
     <!-- タッチ操作ボタン -->
@@ -404,7 +417,7 @@
     <img id="btnParry" src="btn_parry.png" class="control-button">
   </div>
 
-  <button id="restartButton">再プレイ</button>
+ 
 
 <script>
   const game = document.getElementById("game");
