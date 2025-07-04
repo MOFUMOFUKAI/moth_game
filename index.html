@@ -61,6 +61,7 @@
       height: 150vw;
       max-width: 400px;
       max-height: 600px;
+      margin-top: -2px; /* ← この1行を追加 */
       background: #111;
       border: 2px solid #fff;
       overflow: hidden;
@@ -166,7 +167,7 @@
       50% { filter: brightness(3); }
       100% { filter: brightness(1); }
     }
-   /* スコア・レベル・経験値（白枠外） */
+   /* スコア（白枠外） */
     #uiTop {
       width: 400px;
       margin-bottom: 10px;
@@ -178,13 +179,14 @@
       font-size: 20px;
       margin-bottom: 4px;
     }
+   /* ハート（ライフ表示）レベル・経験値白枠内左上に表示 */
     #levelExpRow {
-      display: flex;
-      justify-content: space-between;
-      font-size: 16px;
-      padding: 0 10px;
+     position: absolute;
+     top: 4px;
+     right: 6px;
+     font-size: 12px;
+     z-index: 10;
     }
-   /* ハート（ライフ表示）白枠内左上に表示 */
     #lives {
       position: absolute;
       top: 5px;
@@ -330,28 +332,32 @@
 </head>
 
 <body>
-  <!-- UIエリア（スコア、レベル、EXP） -->
+<!-- UIエリア（スコア） → 白枠の外、画面中央上 -->
 <div id="uiTop">
-  <div id="score">スコア: 0</div> <!-- 中央揃え -->
-
-  <div id="levelExpRow">
-    <span id="level">Lv.1</span>
-    <span id="exp">EXP: 0 / 200</span>
-  </div>
+  <div id="score">スコア: 0</div>
 </div>
+
 <div id="time" style="display: none;">タイム: 0.000秒</div>
+
 <!-- タイトル画面 -->
 <div id="titleScreen">
   <img src="title_mothvoid.png" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
 </div>
-  <!-- ゲーム画面 -->
-  <div id="game">
-    <div id="background"></div>
-    <div id="player"></div>
-    <div id="hitbox"></div>
-    <div id="lives">❤️❤️❤️</div>
-    <div id="screenFade"></div>
+
+<!-- ゲーム画面 -->
+<div id="game">
+  <div id="background"></div>
+  <div id="player"></div>
+  <div id="hitbox"></div>
+  <div id="lives">❤️❤️❤️</div>
+  <div id="screenFade"></div>
+
+  <!-- ✅ これを白枠内に表示（右上に配置） -->
+  <div id="levelExpRow">
+    <span id="level">Lv.1</span>
+    <span id="exp">EXP: 0 / 200</span>
+  </div>
      <!-- エフェクト -->
     <img id="justParryEffect" src="eff_just_parry.gif"
        style="display: none; position: absolute; width: 60px; height: 60px; z-index: 3; pointer-events: none;">
@@ -998,7 +1004,7 @@ function stepMove(dir){
   player.style.left = playerX + "px";
   hitbox.style.left = (playerX + 4) + "px";
 }
-
+// ────────────── ダブルタップ判定 ──────────────
 function handleTap(dirKey){
   const now = performance.now();
   if (isTouchHolding) return; // 押しっぱ中はダブルタップ無視
