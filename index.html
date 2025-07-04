@@ -66,6 +66,7 @@
       border: 2px solid #fff;
       overflow: hidden;
       margin: -30px auto 0; /* ← 上に30px寄せる */
+      z-index: 0; 
     }
     #player {
       position: absolute;
@@ -239,7 +240,7 @@
       color: white;
       border: none;
       border-radius: 5px;
-      z-index: 999;               /* 重なり順を最前面に調整 */
+      z-index: 9999;               /* 重なり順を最前面に調整 */
       cursor: pointer;
       pointer-events: auto;       /* タッチを確実に受け付ける */
       touch-action: manipulation; /* ← タップ反応を最適化（特にiOS） */
