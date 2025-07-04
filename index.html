@@ -214,6 +214,7 @@
       background: rgba(0, 0, 0, 0.7);
       font-size: 24px;
       z-index: 10;
+      pointer-events: none; 
     }
     #thankYouText {
       font-size: 36px;
@@ -230,16 +231,17 @@
       display: none;
       position: absolute;
       left: 50%;
-      top: 75%;
-      transform: translateX(-50%);
+      top: 50%; /* ゲーム画面の中央に表示 */
+      transform: translate(-50%, -50%);
       padding: 10px 20px;
       font-size: 18px;
       background-color: #f39c12;
       color: white;
       border: none;
       border-radius: 5px;
-      z-index: 20;
+      z-index: 999;               /* 重なり順を最前面に調整 */
       cursor: pointer;
+      pointer-events: auto;       /* タッチを確実に受け付ける */
     }
     #touchControls {
       display: flex;
