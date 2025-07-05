@@ -476,7 +476,7 @@
   const allObstacles = [];
   let stage = 1;
   let lastParryTime   = 0;   // 前回パリィを打ったタイムスタンプ
-  const PARRY_COOLDOWN = 600; // クールダウン時間 [ms]
+  const PARRY_COOLDOWN = 500; // クールダウン時間 [ms]
   let firstInteraction = false;
   let currentBGM = null;
   let gameStarted = false;
@@ -492,6 +492,7 @@
   let isDodging      = false;   // 回避モーション中
   let speedBoost     = false;   // 回避後 0.3 s だけ 2 倍速
   let keyPressed = {};  // 押下中かどうか
+  let pausedDueToVisibility = false; // タブ非表示による一時停止かどうか
 
   const DOUBLE_TAP_MS = 200;    // 0.2 秒以内
   const STEP_PX       = 30;     // 1 ステップ距離
@@ -684,6 +685,11 @@ function startGame() {
   });
   /* ★★★★★ ここまで音量プリセット ★★★★★ */
   
+  // スクロール速度とオフセットを初期化
+  scrollSpeed = 0.3;        // ステージ1の速度に戻す
+  backgroundOffset = 0;     // 背景位置もリセット
+
+  setStageBackgroundSpeed(1);  // 明示的にステージ1として速度設定（←より堅実）
   // 背景画像を即表示（ゲーム開始直後に1枚目を表示）
   updateBackgroundInstant(1); 
   
@@ -737,6 +743,15 @@ restartButton.addEventListener("touchstart", (e) => {
 titleScreen.addEventListener("touchstart", () => {
   if (!gameStarted) startGame();
 });
+/* =======================================================
+   ▼ ポーズ機能処理
+   ======================================================= */
+function pauseGame() {
+  clearInterval(obstacleGenerationInterval);
+  clearInterval(scoreUpdateInterval);
+  clearInterval(timeUpdateInterval);
+  if (currentBGM) currentBGM.pause();
+}
 /* =======================================================
    ▼ 障害物作成リセット処理
    ======================================================= */
@@ -1271,7 +1286,7 @@ function addExp(amount) {
       const dy = Math.max(oRect.top - pcy, 0, pcy - oRect.bottom);
       const dist = Math.hypot(dx, dy);
 
-      if (!justParry && dist <= 45) {  // 判定距離：42px以内
+      if (!justParry && dist <= 46) {  // 判定距離：46px以内
         justParry = true;
 
         // eff_parry.gifを削除
@@ -1793,6 +1808,22 @@ window.addEventListener("load", function () {
   setTimeout(function () {
     window.scrollTo(0, 1);
   }, 100);
+});
+/* =======================================================
+   ▼ visibilitychange イベントを追加
+   ======================================================= */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (gameStarted && !gameOver) {
+      pauseGame(); // ↓で定義
+      pausedDueToVisibility = true;
+    }
+  } else {
+    if (pausedDueToVisibility) {
+      showResumeOverlay(); // ↓で定義
+      pausedDueToVisibility = false;
+    }
+  }
 });
 </script>
 </body>
