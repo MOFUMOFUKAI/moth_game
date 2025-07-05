@@ -806,7 +806,7 @@ function createObstacle() {
   const img = document.createElement("img");
   const sizeStr = sizeOption;
   const colorInitial = colorClass[0].toUpperCase();
-  img.src = `enm_${sizeStr}_${colorInitial}.gif`;
+  img.src = `enm_${sizeStr}_${colorInitial}.webp`;
   img.className = "obstacle-img";
 
   if (sizeOption === "small") {
@@ -1334,7 +1334,7 @@ function createExplosion(x, y, scoreValue = 0, isJust = false, noExplosion = fal
   // ---------- 爆発エフェクト ----------
   if (!noExplosion) {
     const explosion = document.createElement("img");
-    explosion.src = "eff_bomb_L.gif";
+    explosion.src = "eff_bomb_L.webp";
     explosion.style.position = "absolute";
     explosion.style.left = x + "px";  // ← 余計な +20 削除
     explosion.style.top  = y + "px";
