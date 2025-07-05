@@ -806,7 +806,7 @@ function createObstacle() {
   const img = document.createElement("img");
   const sizeStr = sizeOption;
   const colorInitial = colorClass[0].toUpperCase();
-  img.src = `enm_${sizeStr}_${colorInitial}.webp`;
+  img.src = `enm_${sizeStr}_${colorInitial}.gif`;
   img.className = "obstacle-img";
 
   if (sizeOption === "small") {
@@ -1233,7 +1233,7 @@ function addExp(amount) {
 
   // 通常パリィエフェクト
   const effect = document.createElement("img");
-  effect.src = "eff_parry.webp";
+  effect.src = "eff_parry.gif";
   effect.style.position = "absolute";
   effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 45) + "px";
   effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 45) + "px";
@@ -1265,7 +1265,7 @@ function addExp(amount) {
       if (!justParry && dist <= 45) {  // 判定距離：42px以内
         justParry = true;
 
-        // eff_parry.webpを削除
+        // eff_parry.gifを削除
         effect.remove();
         showJustParry();  // ← ここで呼ぶ
         
@@ -1334,7 +1334,7 @@ function createExplosion(x, y, scoreValue = 0, isJust = false, noExplosion = fal
   // ---------- 爆発エフェクト ----------
   if (!noExplosion) {
     const explosion = document.createElement("img");
-    explosion.src = "eff_bomb_L.webp";
+    explosion.src = "eff_bomb_L.gif";
     explosion.style.position = "absolute";
     explosion.style.left = x + "px";  // ← 余計な +20 削除
     explosion.style.top  = y + "px";
