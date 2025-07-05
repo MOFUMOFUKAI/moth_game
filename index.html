@@ -307,7 +307,6 @@
       top: 0; left: 0;
       width: 100%;
       height: 100%;
-      background-image: url("背景画像のパス");
       background-size: 100% auto;
       background-repeat: repeat-y;
       background-position-y: 0px;
@@ -744,11 +743,18 @@ function resetObstacleSpawn() {
     console.log("既存のspawnInterval停止");
   }
 
+  // スコアに応じた出現間隔を定義
+  let baseInterval = 800;
+  if (score >= 200000) baseInterval = 400;
+  else if (score >= 150000) baseInterval = 500;
+  else if (score >= 100000) baseInterval = 600;
+  else if (score >= 50000) baseInterval = 700;
+
+  console.log(`[resetObstacleSpawn] baseInterval = ${baseInterval}`);
+
   obstacleSpawnInterval = setInterval(() => {
     if (!gameOver) createObstacle();
   }, baseInterval);
-
-  console.log(`[resetObstacleSpawn] baseInterval = ${baseInterval}`);
 }
 
 /* =======================================================
