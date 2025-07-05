@@ -563,18 +563,27 @@ function crossfadeBGM(fromAudio, toAudio, duration = 1500) {
    ▼ 背景スクロール速度
    ======================================================= */
 let backgroundOffset = 0;
-let scrollSpeed = 0.2; // ステージごとに変化する速度
+let scrollSpeed = 0.2; // ステージごとに変化する基本速度（初期値）
 
 function scrollBackground() {
-  backgroundOffset += scrollSpeed;
-  const bg = document.getElementById("background");
+  // スコアに応じた加速処理
+  let extraSpeed = 0;
+  if (score >= 300000) {
+    const steps = Math.floor((score - 300000) / 150000) + 1;
+    extraSpeed = Math.min(steps, 7); // 最大加速は +7.0 まで
+  }
 
-  // background-position-y を「%」ではなく「px」単位で扱い、自然なループに
-  bg.style.backgroundPositionY = `${backgroundOffset}px`;
+  // 背景スクロール処理
+  backgroundOffset += scrollSpeed + extraSpeed;
+  const bg = document.getElementById("background");
+  if (bg) {
+    bg.style.backgroundPositionY = `${backgroundOffset}px`;
+  }
 
   requestAnimationFrame(scrollBackground);
 }
 
+// ステージごとの基本スクロール速度を設定（ゲーム開始・進行時に呼び出し）
 function setStageBackgroundSpeed(stage) {
   if (stage === 1) scrollSpeed = 0.3;
   else if (stage === 2) scrollSpeed = 0.5;
@@ -1557,11 +1566,16 @@ function reflectObstacle(obstacle, isRainbow) {
    ▼ ゲームクリア時の評価判定
    ======================================================= */
 function getTimeRating(score, time) {
-  const scorePerTime = score / time;  // スコア ÷ タイム（ミリ秒単位）
-let rating = '';
-  
-  // 評価基準（スコア ÷ タイム を1000分の1にした場合）
-  if (scorePerTime >= 3.2) {
+  const scorePerTime = score / time;  // スコア ÷ タイム（秒単位を想定）
+
+  let rating = '';
+
+  // 評価基準（スコア÷タイム）
+  if (scorePerTime >= 4.0) {
+    rating = "SSS";
+  } else if (scorePerTime >= 3.6) {
+    rating = "SS";
+  } else if (scorePerTime >= 3.2) {
     rating = "S";
   } else if (scorePerTime >= 2.8) {
     rating = "A";
