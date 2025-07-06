@@ -1506,8 +1506,8 @@ function reflectObstacle(obstacle, isRainbow) {
         scoreAdd = hp2 === 2 ? 1500 : 1000;
         expAdd = hp2 === 2 ? 15 : 10;
       } else if (stageType === 3) {
-        scoreAdd = hp2 === 3 ? 2500 : 1000;
-        expAdd = hp2 === 3 ? 25 : 10;
+        scoreAdd = hp2 === 3 ? 2500 : 1500;
+        expAdd = hp2 === 3 ? 25 : 15;
       } else if (stageType === 4) {
         const imgSrc = other.querySelector("img")?.src || "";
         if (hp2 === 3 && imgSrc.includes("enm_huge_B")) {
