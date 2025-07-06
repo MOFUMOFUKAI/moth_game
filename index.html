@@ -80,8 +80,8 @@
     }
     #hitbox {
       position: absolute;
-      width: 38px;
-      height: 38px;
+      width: 35px;
+      height: 35px;
       bottom: 12px;
       left: 182px;
       pointer-events: none;
@@ -283,8 +283,8 @@
     }
 
     .control-button {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
     }
     #btnParry {
       margin-right: 70px; /* ← 右詰め調整 */
@@ -312,7 +312,17 @@
       background-position-y: 0px;
       z-index: 0;
     }
-
+    #bgDarkenLayer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.75s ease;
+      z-index: 1;
+    }
     .obstacle-img {
       position: absolute;
       pointer-events: none;
@@ -351,15 +361,16 @@
 
 <!-- タイトル画面 -->
 <div id="titleScreen">
-  <img src="title_mothvoid.png" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
+  <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
+  Ver.0.8<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
   プレイするのがおススメ！<br>
   ※iOS 15以上（iPhone / iPad）<br>
-  ※Safari または Chrome 最新版を使用してください
+  ※Safari/Chromeは最新版を使用してください
   
 </p>
 </div>
@@ -367,6 +378,7 @@
 <!-- ゲーム画面 -->
 <div id="game">
   <div id="background"></div>
+  <div id="bgDarkenLayer"></div>
   <div id="player"></div>
   <div id="hitbox"></div>
   <div id="lives">❤️❤️❤️</div>
@@ -424,9 +436,7 @@
     <img id="btnParry" src="btn_parry.png" class="control-button">
   </div>
 
- 
-
-<script>
+ <script>
   const game = document.getElementById("game");
   const player = document.getElementById("player");
   const hitbox = document.getElementById("hitbox");
@@ -476,7 +486,7 @@
   const allObstacles = [];
   let stage = 1;
   let lastParryTime   = 0;   // 前回パリィを打ったタイムスタンプ
-  const PARRY_COOLDOWN = 500; // クールダウン時間 [ms]
+  const PARRY_COOLDOWN = 450; // クールダウン時間 [ms]
   let firstInteraction = false;
   let currentBGM = null;
   let gameStarted = false;
@@ -511,17 +521,19 @@ let timeUpdateInterval;
 
 // BGM フェードイン再生関数（volume 0 → 1）
 function fadeInBGM(audio, duration = 1000) {
-  const target = parseFloat(audio.dataset.targetVolume || 1);   // ★ 追加
+  const target = parseFloat(audio.dataset.targetVolume || 1);
   audio.volume = 0;
   audio.currentTime = 0;
   audio.play().catch(console.warn);
 
   const step = target / (duration / 50);
+  let n = 0;
   const id = setInterval(() => {
-    audio.volume = Math.min(target, audio.volume + step);        // ★ target まで
-    if (audio.volume >= target) {
+    n++;
+    audio.volume = Math.min(target, audio.volume + step);
+    if (audio.volume >= target || n >= (duration / 50)) {
       clearInterval(id);
-      currentBGM = audio;
+      currentBGM = audio;  // ← ここでようやく currentBGM を確定
     }
   }, 50);
 }
@@ -603,18 +615,19 @@ const FADE_MS = 1500;          // ←BGM の crossfadeBGM() と揃えていま�
  * @param {number} nextStage 1〜4
  */
 function crossfadeBackground(nextStage){
-  const bg    = document.getElementById("background");   // <div id="background">
-  const shade = document.getElementById("screenFade");   // <div id="screenFade">
+  const bg    = document.getElementById("background");
+  const darken = document.getElementById("bgDarkenLayer");
 
-  /* --- 暗転開始 --- */
-  shade.style.transition = `opacity ${FADE_MS/2}ms ease`;
-  shade.style.opacity    = 1;
+  // 暗くする
+  darken.style.opacity = 1;
 
-  /* --- 暗転が半分終わったら画像差し替え、即・明転 --- */
-  setTimeout(()=>{
-    bg.style.backgroundImage = `url(env_stage${nextStage}.webp)`; // 例: env_stage3.webp
-    shade.style.opacity = 0;                                     // 明転
-  }, FADE_MS/2);
+  setTimeout(() => {
+    // 背景画像切替（暗いまま切り替え）
+    bg.style.backgroundImage = `url(env_stage${nextStage}.webp)`;
+
+    // 明るく戻す
+    darken.style.opacity = 0;
+  }, FADE_MS / 2);
 }
 
 /* =======================================================
@@ -661,8 +674,6 @@ function checkStage(){
     setStageBackgroundSpeed(stage); // ← ここで背景スクロール速度を変更
   }
 }
-
-
 /* =======================================================
    ▼ メインゲーム開始処理
    ======================================================= */
@@ -677,7 +688,7 @@ function startGame() {
     document.getElementById("parryInstruction").style.display = "none";
   }
   
-   allObstacles.forEach(obj => obj.remove());
+  allObstacles.forEach(obj => obj.remove());
   allObstacles.length = 0;
   scrollBackground();
   
@@ -694,7 +705,12 @@ function startGame() {
   });
   /* ★★★★★ ここまで音量プリセット ★★★★★ */
   
-  // スクロール速度とオフセットを初期化
+  // スクロール速度とオフセット・レベル・経験値などを初期化
+  level = 1;
+  exp = 0;
+  maxLives = 3;
+  lives = maxLives;
+  playerSpeed = 3;
   scrollSpeed = 0.3;        // ステージ1の速度に戻す
   backgroundOffset = 0;     // 背景位置もリセット
 
@@ -707,25 +723,25 @@ function startGame() {
   gameStarted = true; 
   score = 0;
   lives = maxLives = 3;
-  stage = 1;
   parryGauge = 0;
   startTime = Date.now();
   resetObstacleSpawn(); // ← ここだけにする 
-
-  // UI 初期化
-  gameClear.style.display = "none";
-  restartButton.style.display = "none";
-  updateUI();
-
+  
   // BGM 初期化と再生
   [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final].forEach(bgm => {
     bgm.pause();
     bgm.currentTime = 0;
     bgm.volume = 0;
   });
-  bgm.Stage1.volume = 1;
-  currentBGM = bgm.Stage1;
-  fadeInBGM(currentBGM, 1000);
+  
+  stage = 0;
+  currentBGM = null;
+  checkStage();
+
+  // UI 初期化
+  gameClear.style.display = "none";
+  restartButton.style.display = "none";
+  updateUI();
 
   // タイマー再設定
   clearInterval(obstacleGenerationInterval);
@@ -904,7 +920,10 @@ function createObstacle() {
     item.style.top = y + "px";
 
     const playerRect = hitbox.getBoundingClientRect();
-    const itemRect = item.getBoundingClientRect();
+    const itemRect = getAdjustedRect(item); 
+    // 仮表示（デバッグ確認用）
+  //drawCollisionBox(itemRect, "rgba(0, 255, 0, 0.3)");
+  //drawCollisionBox(playerRect, "rgba(0, 0, 255, 0.3)");
 
     // パリィ判定
     if (parryActive && item.dataset.type === "damage") {
@@ -1259,7 +1278,7 @@ function addExp(amount) {
   lastParryTime = Date.now();
 
   seParry.play();         // 効果音再生
-  setInvincible(350);     // 無敵時間（0.35秒）
+  setInvincible(380);     // 無敵時間（0.38秒）
 
   parryActive = true;
   justParry = false;
@@ -1276,10 +1295,10 @@ function addExp(amount) {
   effect.style.zIndex = "3";
   game.appendChild(effect);
 
-  // 通常パリィは0.3秒表示 → ジャストでなければ削除
+  // 通常パリィは0.35秒表示 → ジャストでなければ削除
   setTimeout(() => {
     if (!justParry) effect.remove();
-  }, 300);
+  }, 350);
 
   // ---------------- ② ジャストパリィ判定 ----------------
   setTimeout(() => {
@@ -1295,7 +1314,7 @@ function addExp(amount) {
       const dy = Math.max(oRect.top - pcy, 0, pcy - oRect.bottom);
       const dist = Math.hypot(dx, dy);
 
-      if (!justParry && dist <= 46) {  // 判定距離：46px以内
+      if (!justParry && dist <= 42) {  // 判定距離：42px以内
         justParry = true;
 
         // eff_parry.gifを削除
@@ -1431,6 +1450,22 @@ function createExplosion(x, y, scoreValue = 0, isJust = false, noExplosion = fal
     return !(r1.top > r2.bottom || r1.bottom < r2.top || r1.left > r2.right || r1.right < r2.left);
   }
 
+/* =======================================================
+   ▼ 障害物コリジョンサイズ変更（高さ）
+   ======================================================= */
+function getAdjustedRect(elem) {
+  const rect = elem.getBoundingClientRect();
+  const newHeight = rect.height * 0.7;
+
+  return {
+    top: rect.bottom - newHeight,        // ← 下寄せに変更
+    bottom: rect.bottom,
+    left: rect.left,
+    right: rect.right,
+    width: rect.width,
+    height: newHeight
+  };
+}
 /* =======================================================
    ▼ 障害物同士のコリジョン判定
    ======================================================= */
@@ -1644,7 +1679,7 @@ function endGame() {
     document.getElementById("thankYouText").style.display = "block";
 
     // ゲームクリア後はstartGame()で再スタートできるようにする
-    restartButton.onclick = () => startGame();
+    restartButton.onclick = () => location.reload();
   }
 }
 
@@ -1839,6 +1874,24 @@ document.addEventListener("visibilitychange", () => {
     }
   }
 });
+/* =======================================================
+   ▼デバッグ用コリジョン表示
+   ======================================================= */
+/*function drawCollisionBox(rect, color = "rgba(255, 0, 0, 0.3)") {
+  const box = document.createElement("div");
+  box.style.position = "absolute";
+  box.style.left = rect.left + "px";
+  box.style.top = rect.top + "px";
+  box.style.width = rect.width + "px";
+  box.style.height = rect.height + "px";
+  box.style.backgroundColor = color;
+  box.style.zIndex = "9999"; // 一番上に表示
+  box.style.pointerEvents = "none";
+  document.body.appendChild(box);
+
+  // 少し経ったら消えるように（デバッグ用途）
+  setTimeout(() => box.remove(), 100);
+}*/
 </script>
 </body>
 </html>
