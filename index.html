@@ -171,6 +171,7 @@
     }
    /* スコア（白枠外） */
     #uiTop {
+      position: relative; 
       width: 400px;
       margin-bottom: 80px;
       color: white;
@@ -348,6 +349,42 @@
         transform: translateY(-30px);
       }
     }
+    
+    /* ▼ ポーズ／再開ボタンの配置・見た目 */
+   #pauseControls {
+     position: absolute;
+     top: -8px;
+     right: 20px;
+     z-index: 15;
+     display: flex;
+     gap: 6px;
+   }
+
+   #pauseButton,
+   #resumeButton {
+     font-size: 18px;
+     background: none;
+     border: none;
+     color: white;
+     cursor: pointer;
+     padding: 2px 6px;
+   }
+
+   /* ポーズ中に中央に表示されるPAUSEテキスト */
+   #pauseOverlay {
+     position: absolute;
+     top: 50%;
+     left: 50%;
+     transform: translate(-50%, -50%);
+     font-size: 36px;
+     color: white;
+     background: rgba(0, 0, 0, 0.6);
+     padding: 10px 30px;
+     border-radius: 10px;
+     display: none;
+     z-index: 999;
+     pointer-events: none;
+   }
   </style>
 </head>
 
@@ -355,6 +392,12 @@
 <!-- UIエリア（スコア） → 白枠の外、画面中央上 -->
 <div id="uiTop">
   <div id="score">スコア: 0</div>
+  
+   <!-- ポーズ／再開ボタン（右上） -->
+  <div id="pauseControls">
+    <button id="pauseButton" title="ポーズ">⏸</button>
+    <button id="resumeButton" title="再開" style="display: none;">▶️</button>
+  </div>
 </div>
 
 <div id="time" style="display: none;">タイム: 0.000秒</div>
@@ -364,7 +407,7 @@
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.0.8<br>
+  Ver.0.81<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -389,6 +432,9 @@
     <span id="level">Lv.1</span>
     <span id="exp">EXP: 0 / 200</span>
   </div>
+  <!-- ポーズ中の表示 -->
+  <div id="pauseOverlay">PAUSE</div>
+  
      <!-- エフェクト -->
     <img id="justParryEffect" src="eff_just_parry.gif"
        style="display: none; position: absolute; width: 60px; height: 60px; z-index: 3; pointer-events: none;">
@@ -495,6 +541,7 @@
   let baseInterval   = 800;  // ★ 現在の間隔（初期 800ms）
   let obstacleTimerId      = null; // ★ setInterval の ID を保持
   let obstacleSpawnInterval = null;
+  let isPaused = false;
 
   // 回避移動関連の変数
   let lastKey        = "";      // 直前の方向キー
@@ -764,6 +811,7 @@ restartButton.addEventListener("touchstart", (e) => {
   e.preventDefault(); // iOSでのフォーカス・選択など防止
   startGame();
 });
+
 // タイトル画面：スマホ対応
 titleScreen.addEventListener("touchstart", () => {
   if (!gameStarted) startGame();
@@ -777,6 +825,44 @@ function pauseGame() {
   clearInterval(timeUpdateInterval);
   if (currentBGM) currentBGM.pause();
 }
+
+// ▼ ポーズ／再開ボタン処理
+const pauseButton = document.getElementById("pauseButton");
+const resumeButton = document.getElementById("resumeButton");
+const pauseOverlay = document.getElementById("pauseOverlay");
+
+pauseButton.addEventListener("click", () => {
+  if (gameOver || gamePaused) return;
+
+  pauseGame(); // 既存関数を呼ぶ
+  gamePaused = true;
+
+  // UI切替
+  pauseOverlay.style.display = "block";
+  pauseButton.style.display = "none";
+  resumeButton.style.display = "inline";
+});
+
+resumeButton.addEventListener("click", () => {
+  if (gameOver || !gamePaused) return;
+
+  gamePaused = false;
+  resumeGame();
+
+  pauseOverlay.style.display = "none";
+  pauseButton.style.display = "inline";
+  resumeButton.style.display = "none";
+});
+
+// ▼ 再開処理（resumeGame）を追加
+function resumeGame() {
+  if (currentBGM) currentBGM.play();
+
+  scoreUpdateInterval = setInterval(updateScore, 100);
+  timeUpdateInterval = setInterval(updateTime, 30);
+  resetObstacleSpawn(); // ← 再開時の障害物生成再開
+}
+
 /* =======================================================
    ▼ 障害物作成リセット処理
    ======================================================= */
@@ -804,7 +890,7 @@ function resetObstacleSpawn() {
    ▼ 障害物作成処理
    ======================================================= */
 function createObstacle() {
-  if (gameOver) return;
+  if (gameOver || isPaused) return;
   const item = document.createElement("div");
   item.classList.add("obstacle");
 
@@ -916,6 +1002,7 @@ function createObstacle() {
   let y = 0;
   const fall = setInterval(() => {
     if (gameOver || !item.parentElement) return clearInterval(fall);
+    if (isPaused) return;  
     y += fallSpeed;
     item.style.top = y + "px";
 
@@ -1073,7 +1160,7 @@ let isTouchHolding = false;
 let touchHoldInterval = null;
 
 function stepMove(dir){
-  if (gameOver) return;
+  if (gameOver || isPaused) return;
   const delta = speedBoost ? playerSpeed * 2 : playerSpeed;
 
   if (dir === "ArrowLeft")  playerX = Math.max(0,   playerX - delta);
@@ -1102,8 +1189,17 @@ document.addEventListener("keydown", e => {
   if (gameOver) return;
 
   const key = e.key;
+
+  // 🔶 パリィ：FキーまたはEnterキーで発動
+  if (key === "f" || key === "F" || key === "Enter") {
+    activateParry();
+    return; // パリィ発動後は他の処理をしない
+  }
+
+  // ⬅️➡️ 左右キー処理（移動／回避）
   const isLeft  = key === "ArrowLeft"  || key === "a" || key === "A";
   const isRight = key === "ArrowRight" || key === "d" || key === "D";
+
   if (!isLeft && !isRight) return;
 
   const dirKey = isLeft ? "ArrowLeft" : "ArrowRight";
@@ -1115,7 +1211,6 @@ document.addEventListener("keydown", e => {
     handleTap(dirKey);
   }
 });
-
 document.addEventListener("keyup", e => {
   const key = e.key;
   if (key === "ArrowLeft"  || key === "a" || key === "A") keyPressed["ArrowLeft"]  = false;
@@ -1182,9 +1277,26 @@ btnParry.addEventListener("touchstart", e => {
   e.preventDefault();
   activateParry();
 });
+// 🔽 ポーズボタンでゲーム一時停止
+pauseButton.addEventListener("click", () => {
+  isPaused = true;
+  pauseBGM();
+  pauseOverlay.style.display = "flex";
+  pauseButton.style.display = "none";
+  resumeButton.style.display = "inline";
+});
 
+// 🔽 再開ボタンでゲーム再開
+resumeButton.addEventListener("click", () => {
+  isPaused = false;
+  resumeBGM();
+  pauseOverlay.style.display = "none";
+  pauseButton.style.display = "inline";
+  resumeButton.style.display = "none";
+});
 // ────────────── 押しっぱ移動ループ（スマホ/PC共通）──────────────
 setInterval(() => {
+  if (isPaused) return;
   if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
   if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
 }, 30);
@@ -1193,6 +1305,7 @@ setInterval(() => {
 
   // タイムの更新（ミリ秒単位）
   function updateTime() {
+    if (isPaused) return;
     if (gameOver) return; // ゲームオーバー時にはタイム更新しない
     gameTime = (Date.now() - startTime);  // ミリ秒単位で経過時間を取得
     timeEl.innerHTML = `タイム: ${(gameTime / 1000).toFixed(3)}秒`;  // 小数点以下3桁で表示
@@ -1273,6 +1386,7 @@ function addExp(amount) {
    ▼ パリィ/ジャストパリィ
    ======================================================= */
    function activateParry() {
+   if (gameOver || isPaused) return;
   // パリィの連射防止（クールダウンと発動中チェック）
   if (parryActive || Date.now() - lastParryTime < PARRY_COOLDOWN) return;
   lastParryTime = Date.now();
@@ -1698,6 +1812,7 @@ setInterval(() => {
    ======================================================= */
 function maybeSpawnHeart() {
   if (lives < maxLives && Math.random() < 0.05) {
+    if (isPaused) return;
     const heart = document.createElement("div");
     heart.classList.add("heal");
     heart.textContent = "💗";
@@ -1766,6 +1881,7 @@ function maybeSpawnHeart() {
    ======================================================= */
 function maybeSpawnLemon() {
   if (lives === maxLives && Math.random() < 0.03) {
+    if (isPaused) return;
     const lemon = document.createElement("div");
     lemon.classList.add("heal");
     lemon.textContent = "🍋";
