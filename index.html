@@ -354,7 +354,7 @@
     /* ▼ ポーズ／再開ボタンの配置・見た目 */
    #pauseControls {
      position: absolute;
-     top: -8px;
+     top: -6px;
      right: 20px;
      z-index: 15;
      display: flex;
@@ -741,7 +741,7 @@ function startGame() {
   scrollBackground();
   
   /* ★★★★★ ここから音量プリセット ★★★★★ */
-  const BGM_VOLUME = 0.7;   // ← 好みに合わせて数値を変える
+  const BGM_VOLUME = 0.8;   // ← 好みに合わせて数値を変える
   const SE_VOLUME  = 0.8;   // ← SE 全般の基本音量
 
   // 必要な SE が増えたら配列に追加して下さい
@@ -773,6 +773,8 @@ function startGame() {
   lives = maxLives = 3;
   parryGauge = 0;
   startTime = Date.now();
+  lastScoreUpdateTime = 0;        // ✅ ← これを追加（スコア加算再開のため）
+  gameTime = 0;                   // ✅ ← タイムもゼロからスタート
   resetObstacleSpawn(); // ← ここだけにする 
   
   // BGM 初期化と再生
@@ -1627,6 +1629,11 @@ function reflectObstacle(obstacle, isRainbow) {
 
     y += vy;
     obstacle.style.top = y + "px";
+    
+      // ✅ フレーム数で処理頻度を半分に制御
+    if (!obstacle.frameCount) obstacle.frameCount = 0;
+    obstacle.frameCount++;
+    if (obstacle.frameCount % 2 !== 0) return;
 
     const selfW = parseFloat(obstacle.dataset.hitboxW || originalW);
     const selfH = parseFloat(obstacle.dataset.hitboxH || originalH);
@@ -1772,7 +1779,6 @@ function endGame() {
     gameClear.style.display = "none";
     restartButton.style.display = "block";
     restartButton.style.pointerEvents = "auto"; // スマホでも確実にタップ可能に
-    restartButton.onclick = () => location.reload();
 
   } else {
     // ▼▼▼【ここに障害物削除処理を追加】▼▼▼
@@ -1792,14 +1798,11 @@ function endGame() {
     gameClear.style.display = "flex";
     restartButton.style.display = "block";
     document.getElementById("thankYouText").style.display = "block";
-
-    // ゲームクリア後はstartGame()で再スタートできるようにする
-    restartButton.onclick = () => location.reload();
   }
+  
+  updateUI();
 }
 
-
-  updateUI();
 setInterval(() => {
   if (gameStarted && !gameOver) {
     maybeSpawnHeart(); // ハート生成
@@ -1812,70 +1815,81 @@ setInterval(() => {
    ▼ ハート生成
    ======================================================= */
 function maybeSpawnHeart() {
-  if (lives < maxLives && Math.random() < 0.05) {
-    if (isPaused) return;
-    const heart = document.createElement("div");
-    heart.classList.add("heal");
-    heart.textContent = "💗";
-    heart.style.left = Math.floor(Math.random() * 9) * 40 + "px";
-    heart.style.top = "0px";
-    game.appendChild(heart);
+  // ライフが満タンの場合は何も出現しない
+  if (lives >= maxLives) return;
+  if (isPaused) return;
 
-    let heartY = 0;
-    const heartFall = setInterval(() => {
-      if (heartY > 600) {
+  let isGold = false;
+
+  // 💛 ゴールドハート出現条件（ライフ1以下かつ2%）
+  if (lives <= 1 && Math.random() < 0.02) {
+    isGold = true;
+  }
+  // 💗 通常ハート出現条件（5%）
+  else if (Math.random() < 0.05) {
+    isGold = false;
+  } else {
+    return; // どちらも条件を満たさなければ出現しない
+  }
+
+  const heart = document.createElement("div");
+  heart.classList.add("heal");
+  heart.textContent = isGold ? "💛" : "💗";
+  heart.style.left = Math.floor(Math.random() * 9) * 40 + "px";
+  heart.style.top = "0px";
+  game.appendChild(heart);
+
+  let heartY = 0;
+  const fallSpeed = isGold ? 8 : 5;
+
+  const heartFall = setInterval(() => {
+    if (heartY > 600) {
+      heart.remove();
+      clearInterval(heartFall);
+      return;
+    }
+
+    heartY += fallSpeed;
+    heart.style.top = heartY + "px";
+
+    const heartRect = heart.getBoundingClientRect();
+    const playerRect = hitbox.getBoundingClientRect();
+
+    // 🎯 プレイヤーが取得した場合
+    if (checkCollision(heartRect, playerRect)) {
+      if (lives < maxLives) {
+        lives = isGold ? maxLives : lives + 1;
+        heart.remove();
+
+        if (seItem) {
+          seItem.currentTime = 0;
+          seItem.play().catch(e => console.warn("アイテムSE再生エラー:", e));
+        }
+
+        updateUI();
+        clearInterval(heartFall);
+      }
+      return;
+    }
+
+    // 💥 反射障害物に当たったら破壊（SEなし）
+    for (let obstacle of allObstacles) {
+      const obstacleRect = obstacle.getBoundingClientRect();
+      if (checkCollision(heartRect, obstacleRect) && obstacle.dataset.type === "reflected") {
         heart.remove();
         clearInterval(heartFall);
+
+        createExplosion(
+          heartRect.left + heartRect.width / 2 - game.getBoundingClientRect().left,
+          heartRect.top + heartRect.height / 2 - game.getBoundingClientRect().top,
+          0, false, false
+        );
+
         return;
       }
-
-      heartY += 5;
-      heart.style.top = heartY + "px";
-
-      const heartRect = heart.getBoundingClientRect();
-      const playerRect = hitbox.getBoundingClientRect();
-
-      // 🎯 プレイヤーが取得した場合のみSEを鳴らす
-      if (checkCollision(heartRect, playerRect)) {
-        if (lives < maxLives) {
-          lives++;
-          heart.remove();
-
-          // ✅ ここだけで鳴らす
-          if (seItem) {
-            seItem.currentTime = 0;
-            seItem.play().catch(e => console.warn("アイテムSE再生エラー:", e));
-          }
-
-          updateUI();
-          clearInterval(heartFall);
-        }
-        return;
-      }
-
-      // ⚠️ 反射された障害物に当たった場合 → 破壊、SEは鳴らさない
-      for (let obstacle of allObstacles) {
-        const obstacleRect = obstacle.getBoundingClientRect();
-        if (checkCollision(heartRect, obstacleRect) && obstacle.dataset.type === "reflected") {
-          heart.remove();
-          clearInterval(heartFall);
-
-          // 🔥 エフェクトとSEだけ出す（必要ならここに explosion 音と画像）
-          createExplosion(
-            heartRect.left + heartRect.width / 2 - game.getBoundingClientRect().left,
-            heartRect.top + heartRect.height / 2 - game.getBoundingClientRect().top,
-            0, // スコアなし
-            false,
-            false // ← 爆発する
-          );
-
-          return;
-        }
-      }
-    }, 30);
-  }
+    }
+  }, 30);
 }
-
 
 /* =======================================================
    ▼ レモン生成
