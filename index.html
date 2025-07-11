@@ -216,7 +216,7 @@
       color: yellow;
       background: rgba(0, 0, 0, 0.7);
       font-size: 24px;
-      z-index: 10;
+      z-index: 20;
       pointer-events: none; 
     }
     #thankYouText {
@@ -408,7 +408,7 @@
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.0.9.2<br>
+  Ver.0.9.3<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -551,6 +551,7 @@
   let speedBoost     = false;   // 回避後 0.3 s だけ 2 倍速
   let keyPressed = {};  // 押下中かどうか
   let pausedDueToVisibility = false; // タブ非表示による一時停止かどうか
+  let lastExplosionTime = 0;
 
   const DOUBLE_TAP_MS = 200;    // 0.2 秒以内
   const STEP_PX       = 30;     // 1 ステップ距離
@@ -1550,16 +1551,25 @@ function createExplosion(x, y, scoreValue = 0, isJust = false, noExplosion = fal
     }, 40);
   }
 }
+/* =======================================================
+   ▼ 爆発発生処理軽量化
+   ======================================================= */
+function safeCreateExplosion(x, y, score, isJust, isBomb, exp) {
+  const now = Date.now();
+  if (now - lastExplosionTime < 50) return;  // 50ms以内ならスキップ
+  lastExplosionTime = now;
 
+  createExplosion(x, y, score, isJust, isBomb, exp);
+}
 /* =======================================================
    ▼ 障害物ダメージ表現
    ======================================================= */
   function applyHitFlash(obstacle) {
-  obstacle.classList.add("hit-effect");
-  setTimeout(() => {
-    obstacle.classList.remove("hit-effect");
-  }, 250);
-} 
+    obstacle.style.filter = "brightness(2)";
+    setTimeout(() => {
+      if (obstacle) obstacle.style.filter = "";
+    }, 150);
+  }
 /* =======================================================
    ▼ コリジョン判定
    ======================================================= */
@@ -1683,27 +1693,29 @@ function reflectObstacle(obstacle, isRainbow) {
         // ジャストパリィ
         score += scoreAdd * 2;
         addExp(expAdd);
-        createExplosion(otherX, otherY, scoreAdd * 2, true, false, expAdd);
+        safeCreateExplosion(otherX, otherY, scoreAdd * 2, true, false, expAdd);
         other.remove();
       } else {
         // 通常パリィ
         if (hp1 === hp2) {
           score += scoreAdd;
           addExp(expAdd);
-          createExplosion(otherX, otherY, scoreAdd, false, false, expAdd);
+          safeCreateExplosion(otherX, otherY, scoreAdd, false, false, expAdd);
           obstacle.remove();
           other.remove();
           clearInterval(move);
         } else if (hp1 > hp2) {
           score += scoreAdd;
           addExp(expAdd);
-          createExplosion(otherX, otherY, scoreAdd, false, false, expAdd);
+          safeCreateExplosion(otherX, otherY, scoreAdd, false, false, expAdd);
           obstacle.dataset.hp = hp1 - 1;
           other.remove();
         } else {
           other.dataset.hp = hp2 - 1;
-          other.classList.add("damage-flash");
-          setTimeout(() => other.classList.remove("damage-flash"), 150);
+          other.style.opacity = "0.4";
+          setTimeout(() => {
+            if (other) other.style.opacity = "1";
+        }, 150);
           obstacle.remove();
           clearInterval(move);
         }
