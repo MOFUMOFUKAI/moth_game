@@ -507,7 +507,8 @@
       <div style="margin-top:20px;">
         <button onclick="prevChar()">◀</button>
         <button onclick="nextChar()">▶</button>
-        <button onclick="confirmNameEntry()" id="confirmButton">次へ</button>
+        <button onclick="goBackChar()" id="backButton" style="margin-left: 20px;">前へ</button> <!-- ✅ 新しく追加 -->
+        <button onclick="confirmNameEntry()" id="confirmButton" style="margin-left: 20px;">次へ</button>
       </div>
     </div>
     
@@ -907,28 +908,25 @@ restartButton.addEventListener("touchstart", (e) => {
   e.preventDefault(); // iOSでのフォーカス・選択など防止
   startGame();
 });
-// ✅ このすぐ下に「終了ボタン」のリスナーを追加してください
-exitButton.addEventListener("click", () => {
-  try {
-    window.close();
-  } catch (e) {
-    alert("ゲームを終了します。ブラウザを閉じてください。");
-  }
-});
+
 // スマホ対応：touchstartでも終了ボタンが効くように
+exitButton.addEventListener("click", handleExit);
 exitButton.addEventListener("touchstart", (e) => {
-  e.preventDefault(); // ← iOSでのバグ防止
-  try {
-    window.close();
-  } catch (e) {
-    alert("ゲームを終了します。ブラウザを閉じてください。");
-  }
+  e.preventDefault();  // スマホ特有の挙動（フォーカス/拡大など）を防止
+  handleExit();
 });
 
 // タイトル画面：スマホ対応
 titleScreen.addEventListener("touchstart", () => {
   if (!gameStarted) startGame();
 });
+/* =======================================================
+   ▼ ゲーム終了スマホ対応
+   ======================================================= */
+function handleExit() {
+  const closed = window.close(); // 閉じようと試みる（※多くのスマホで無効）
+  alert("ゲームを終了します。ブラウザを閉じてください。");
+}
 /* =======================================================
    ▼ ポーズ機能処理
    ======================================================= */
@@ -2203,10 +2201,17 @@ function updateNameEntryDisplay() {
   const str = nameChars.map((c, i) => (i === namePos ? `[${c}]` : c)).join(" ");
   document.getElementById("nameEntry").textContent = str;
 
-  // 決定ボタンのラベルを変更
+  // 「次へ」または「決定」の切り替え
   const confirmBtn = document.getElementById("confirmButton");
   if (confirmBtn) {
     confirmBtn.textContent = (namePos === nameChars.length - 1) ? "決定" : "次へ";
+  }
+
+  // 「前へ」ボタンの有効/無効制御
+  const backBtn = document.getElementById("backButton");
+  if (backBtn) {
+    backBtn.disabled = (namePos === 0); // 最初の文字では無効化
+    backBtn.style.opacity = (namePos === 0) ? 0.3 : 1;
   }
 }
 
@@ -2224,6 +2229,13 @@ function prevChar() {
   const prevIdx = (idx - 1 + availableChars.length) % availableChars.length;
   nameChars[namePos] = availableChars[prevIdx];
   updateNameEntryDisplay();
+}
+
+function goBackChar() {
+  if (namePos > 0) {
+    namePos--;
+    updateNameEntryDisplay();
+  }
 }
 
 function displayTopHighScore() {
