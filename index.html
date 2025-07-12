@@ -233,9 +233,9 @@
       display: none;
       position: absolute;
       left: 50%;
-      bottom: 9%; /* ゲーム画面の中央に表示 */
+      bottom: 6%; /* ゲーム画面の中央に表示 */
       transform: translate(-50%, -50%);
-      padding: 10px 20px;
+      padding: 8px 16px;
       font-size: 16px;
       background-color: #f39c12;
       color: white;
@@ -255,8 +255,8 @@
       background-color: gray;
       color: white;
       margin-top: 10px;
-      padding: 10px 14px;
-      font-size: 12px;
+      padding: 8px 10px;
+      font-size: 10px;
       border: none;
       border-radius: 5px;
       z-index: 9999; /* ← 最前面に持ってくる */
@@ -370,7 +370,7 @@
     /* ▼ ポーズ／再開ボタンの配置・見た目 */
    #pauseControls {
      position: absolute;
-     top: -6px;
+     top: -3px;
      right: 20px;
      z-index: 15;
      display: flex;
@@ -428,7 +428,7 @@
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.1.1.0<br>
+  Ver.1.1.1<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -485,7 +485,7 @@
         </p>
         
         <!-- ✅ ランキング表示 -->
-        <div id="scoreList" style="margin-top: 20px; font-size: 16px;"></div>
+        <div id="scoreList" style="margin-top: 14px; font-size: 16px;"></div>
     
       </div>
     </div>
@@ -508,7 +508,6 @@
         <button onclick="prevChar()">◀</button>
         <button onclick="nextChar()">▶</button>
         <button onclick="confirmNameEntry()" id="confirmButton">次へ</button>
-        <button onclick="confirmNameEntry()">決定</button> <!-- ✅ 差し替え -->
       </div>
     </div>
     
@@ -537,13 +536,7 @@
   const timeRatingEl = document.getElementById("timeRating");
   const restartButton = document.getElementById("restartButton");
   const exitButton = document.getElementById("exitButton");
-  exitButton.addEventListener("click", () => {
-  try {
-    window.close(); // ブラウザにより動作しない場合あり
-  } catch (e) {
-    alert("ゲームを終了します。ブラウザを閉じてください。");
-  }
-});
+
   const seParry = document.getElementById("seParry");
   const seBombL = document.getElementById("seBombL");
   const seDodge = document.getElementById("seDodge");
@@ -922,6 +915,16 @@ exitButton.addEventListener("click", () => {
     alert("ゲームを終了します。ブラウザを閉じてください。");
   }
 });
+// スマホ対応：touchstartでも終了ボタンが効くように
+exitButton.addEventListener("touchstart", (e) => {
+  e.preventDefault(); // ← iOSでのバグ防止
+  try {
+    window.close();
+  } catch (e) {
+    alert("ゲームを終了します。ブラウザを閉じてください。");
+  }
+});
+
 // タイトル画面：スマホ対応
 titleScreen.addEventListener("touchstart", () => {
   if (!gameStarted) startGame();
