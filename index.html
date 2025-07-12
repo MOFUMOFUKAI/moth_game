@@ -233,10 +233,10 @@
       display: none;
       position: absolute;
       left: 50%;
-      bottom: 5%; /* ゲーム画面の中央に表示 */
+      bottom: 9%; /* ゲーム画面の中央に表示 */
       transform: translate(-50%, -50%);
       padding: 10px 20px;
-      font-size: 18px;
+      font-size: 16px;
       background-color: #f39c12;
       color: white;
       border: none;
@@ -245,6 +245,23 @@
       cursor: pointer;
       pointer-events: auto;       /* タッチを確実に受け付ける */
       touch-action: manipulation; /* ← タップ反応を最適化（特にiOS） */
+    }
+    #exitButton {
+      display: none;
+      position: absolute;
+      left: 50%;
+      bottom: 0%;
+      transform: translate(-50%, -50%);
+      background-color: gray;
+      color: white;
+      margin-top: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      border: none;
+      border-radius: 5px;
+      z-index: 9999; /* ← 最前面に持ってくる */
+      cursor: pointer;
+      pointer-events: auto;
     }
     #touchControls {
       display: flex;
@@ -404,12 +421,14 @@
 
 <!-- タイトル画面 -->
 <div id="titleScreen">
+<!-- HIGH SCORE 見出しを追加 -->
+  <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px; color: #FFD700;">HIGH SCORE</div>
 <!-- タイトル画面のスコア表示領域（タイトルロゴの上など） -->
   <div id="topHighScore" style="font-size: 14px; margin: 5px auto 0 auto; text-align: center;"></div>
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.0.9.2<br>
+  Ver.1.1.0<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -446,6 +465,7 @@
     <audio id="bgm_stage2" loop><source src="bgm_stage2.mp3" type="audio/mpeg"></audio>
     <audio id="bgm_stage3" loop><source src="bgm_stage3.mp3" type="audio/mpeg"></audio>
     <audio id="bgm_final" loop><source src="bgm_final.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm_result" loop>  <source src="bgm_result.mp3" type="audio/mpeg"></audio>
     <!-- SE -->
     <audio id="seParry"><source src="se_parry.mp3" type="audio/mpeg"></audio>
     <audio id="seDodge"><source src="se_dodge.mp3" type="audio/mpeg"></audio>
@@ -476,6 +496,8 @@
     </div>
     <!-- 再プレイボタン -->
     <button id="restartButton">再プレイ</button>
+    <!-- 終了ボタン -->
+    <button id="exitButton" style="display:none; background-color: gray; color: white; margin-top: 10px;">終了</button>
   </div> <!-- ← #game の閉じタグ -->
   
     <!-- ▼ ハイスコア名前入力UI（初期は非表示） -->
@@ -514,6 +536,14 @@
   const gameClear = document.getElementById("gameClear");
   const timeRatingEl = document.getElementById("timeRating");
   const restartButton = document.getElementById("restartButton");
+  const exitButton = document.getElementById("exitButton");
+  exitButton.addEventListener("click", () => {
+  try {
+    window.close(); // ブラウザにより動作しない場合あり
+  } catch (e) {
+    alert("ゲームを終了します。ブラウザを閉じてください。");
+  }
+});
   const seParry = document.getElementById("seParry");
   const seBombL = document.getElementById("seBombL");
   const seDodge = document.getElementById("seDodge");
@@ -528,7 +558,8 @@
      Stage1: document.getElementById("bgm_stage1"),
      Stage2: document.getElementById("bgm_stage2"),
      Stage3: document.getElementById("bgm_stage3"),
-     Final:  document.getElementById("bgm_final")
+     Final:  document.getElementById("bgm_final"),
+     Result: document.getElementById("bgm_result")
    };
   
 
@@ -768,7 +799,7 @@ function checkStage(){
     crossfadeBackground(stage);
 
     /* BGM もクロスフェード */
-    const targetBGM = [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final][stage - 1];
+    const targetBGM = [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Result][stage - 1];
 
     if (!currentBGM){
       // 初回だけはボリューム 0→1 のフェードインで開始
@@ -804,7 +835,6 @@ function startGame() {
     document.getElementById("moveInstruction").style.display = "none";
     document.getElementById("parryInstruction").style.display = "none";
   }
-  
   allObstacles.forEach(obj => obj.remove());
   allObstacles.length = 0;
   scrollBackground();
@@ -817,7 +847,7 @@ function startGame() {
   [seParry, seDodge, seBombL, seItem, seJustParry].forEach(se => se.volume = SE_VOLUME);
 
   // BGM は fadeInBGM / crossfadeBGM 内で targetVolume を読むようにする
-  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final].forEach(bgm => {
+  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Result].forEach(bgm => {
     bgm.dataset.targetVolume = BGM_VOLUME;   // <- 目標音量を記憶
   });
   /* ★★★★★ ここまで音量プリセット ★★★★★ */
@@ -847,7 +877,7 @@ function startGame() {
   resetObstacleSpawn(); // ← ここだけにする 
   
   // BGM 初期化と再生
-  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final].forEach(bgm => {
+  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Result].forEach(bgm => {
     bgm.pause();
     bgm.currentTime = 0;
     bgm.volume = 0;
@@ -860,6 +890,7 @@ function startGame() {
   // UI 初期化
   gameClear.style.display = "none";
   restartButton.style.display = "none";
+  exitButton.style.display = "none"; // ← これを追加！
   updateUI();
 
   // タイマー再設定
@@ -883,7 +914,14 @@ restartButton.addEventListener("touchstart", (e) => {
   e.preventDefault(); // iOSでのフォーカス・選択など防止
   startGame();
 });
-
+// ✅ このすぐ下に「終了ボタン」のリスナーを追加してください
+exitButton.addEventListener("click", () => {
+  try {
+    window.close();
+  } catch (e) {
+    alert("ゲームを終了します。ブラウザを閉じてください。");
+  }
+});
 // タイトル画面：スマホ対応
 titleScreen.addEventListener("touchstart", () => {
   if (!gameStarted) startGame();
@@ -1800,14 +1838,14 @@ function reflectObstacle(obstacle, isRainbow) {
 }
 
 /* =======================================================
-   ▼ ゲームクリア時の評価判定
+   ▼ ゲームクリア時のRANK判定
    ======================================================= */
 function getTimeRating(score, time) {
   const scorePerTime = score / time;  // スコア ÷ タイム（秒単位を想定）
 
   let rating = '';
 
-  // 評価基準（スコア÷タイム）
+  // RANK基準（スコア÷タイム）
   if (scorePerTime >= 4.0) {
     rating = "SSS";
   } else if (scorePerTime >= 3.6) {
@@ -1871,6 +1909,8 @@ function endGame() {
     gameClear.style.display = "none";
     restartButton.style.display = "block";
     restartButton.style.pointerEvents = "auto"; // スマホでも確実にタップ可能に
+    exitButton.style.display = "block";
+    exitButton.style.pointerEvents = "auto";
 
   } else {
     // ▼▼▼【ここに障害物削除処理を追加】▼▼▼
@@ -1884,12 +1924,16 @@ function endGame() {
 //  console.log("スコア:", score);
 //  console.log("ゲームタイム（秒）:", clearTime);
 //  console.log("スコア ÷ タイム:", score / gameTime);
-//  console.log("評価:", rating);
+//  console.log("RANK:", rating);
 
-    timeRatingEl.textContent = `評価: ${rating}`;
+    timeRatingEl.textContent = `RANK: ${rating}`;
     gameClear.style.display = "flex";
     restartButton.style.display = "block";
     document.getElementById("thankYouText").style.display = "block";
+    
+    // ✅ ここを追加！
+    exitButton.style.display = "block";
+    exitButton.style.pointerEvents = "auto";
     
     // ✅ 表示用ランキングを更新
     displayHighScores();
@@ -1899,6 +1943,10 @@ function endGame() {
       checkAndRegisterHighScore(score, rating);
     }, 500); // 表示完了後、0.5秒で呼び出す
   }
+    // ✅ クリアBGM再生
+    bgm.Result.currentTime = 0;
+    bgm.Result.volume = 0.8;
+    bgm.Result.play();
   
   updateUI();
 }
@@ -2092,7 +2140,7 @@ function checkAndRegisterHighScore(score, rating) {
 
   const coefficient = ratingCoefficients[rating] || 1.0;
   const newPower = score * coefficient;
-  console.log("🧮 評価係数:", coefficient, "→ パワー:", newPower);
+  console.log("🧮 RANK係数:", coefficient, "→ パワー:", newPower);
 
   // ⚠️ 前回の newHighScore が残っていたらクリア（念のため）
   if (gameStarted && gameOver && !enteringName && window.newHighScore) {
@@ -2110,7 +2158,7 @@ function checkAndRegisterHighScore(score, rating) {
   }
 
   if (score < 150000 || !ratingCoefficients[rating]) {
-    console.log("❌ スコアが基準未満か、評価係数が無効。");
+    console.log("❌ スコアが基準未満か、RANK係数が無効。");
     return;
   }
 
@@ -2180,7 +2228,7 @@ function displayTopHighScore() {
   if (!top) return;
   const coeff = ratingCoefficients[top.rating] || 1.0;
   const power = Math.floor(top.score * coeff);
-  const display = `${top.name}　${top.score.toLocaleString()}点　評価：${top.rating}`;
+  const display = `${top.name}　${top.score.toLocaleString()}　RANK：${top.rating}`;
   document.getElementById("topHighScore").textContent = display;
 }
 
