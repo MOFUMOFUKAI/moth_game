@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icn_mothvoid.png">
@@ -400,15 +399,17 @@
     <button id="resumeButton" title="再開" style="display: none;">▶️</button>
   </div>
 </div>
-
+<!-- タイム表示（デバッグ用など） -->
 <div id="time" style="display: none;">タイム: 0.000秒</div>
 
 <!-- タイトル画面 -->
 <div id="titleScreen">
+<!-- タイトル画面のスコア表示領域（タイトルロゴの上など） -->
+  <div id="topHighScore" style="font-size: 14px; margin: 5px auto 0 auto; text-align: center;"></div>
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.0.9.3<br>
+  Ver.0.9.2<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -428,15 +429,16 @@
   <div id="lives">❤️❤️❤️</div>
   <div id="screenFade"></div>
 
-  <!-- ✅ これを白枠内に表示（右上に配置） -->
+   <!-- レベル／経験値表示（白枠右上） -->
   <div id="levelExpRow">
     <span id="level">Lv.1</span>
     <span id="exp">EXP: 0 / 200</span>
   </div>
+  
   <!-- ポーズ中の表示 -->
   <div id="pauseOverlay">PAUSE</div>
   
-     <!-- エフェクト -->
+  <!-- エフェクト -->
     <img id="justParryEffect" src="eff_just_parry.gif"
        style="display: none; position: absolute; width: 60px; height: 60px; z-index: 3; pointer-events: none;">
     <!-- BGM -->
@@ -452,7 +454,7 @@
     <audio id="seJustParry"><source src="se_justparry.mp3" type="audio/mpeg"></audio>
     <!-- クリア画面 -->
     <div id="gameClear">
-      <div>
+     <div>
         <h2 id="thankYouText">Thank you for playing!</h2>
         <p id="timeRating"></p>
         <p id="credits">
@@ -461,6 +463,10 @@
           <span>Programmer: GPT</span><br>
           <span>MOTHVOID 2025/7/01</span>
         </p>
+        
+        <!-- ✅ ランキング表示 -->
+        <div id="scoreList" style="margin-top: 20px; font-size: 16px;"></div>
+    
       </div>
     </div>
 
@@ -468,9 +474,22 @@
     <div id="gameOver">
       <h2>Game Over</h2>
     </div>
+    <!-- 再プレイボタン -->
     <button id="restartButton">再プレイ</button>
-  </div>
-
+  </div> <!-- ← #game の閉じタグ -->
+  
+    <!-- ▼ ハイスコア名前入力UI（初期は非表示） -->
+    <div id="nameEntryScreen" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:#000d; color:white; z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+      <div style="font-size:20px; margin-bottom:10px;">HIGH SCORE! ENTER YOUR NAME</div>
+      <div id="nameEntry" style="font-size:36px; letter-spacing:10px;">A A A A</div>
+      <div style="margin-top:20px;">
+        <button onclick="prevChar()">◀</button>
+        <button onclick="nextChar()">▶</button>
+        <button onclick="confirmNameEntry()" id="confirmButton">次へ</button>
+        <button onclick="confirmNameEntry()">決定</button> <!-- ✅ 差し替え -->
+      </div>
+    </div>
+    
     <!-- タッチ操作ボタン -->
 <div id="touchControls" class="title-only">
   <div class="arrowGroup">
@@ -504,6 +523,7 @@
   const btnRight = document.getElementById("btnRight");
   const btnParry = document.getElementById("btnParry");
   const titleScreen = document.getElementById("titleScreen");
+  const availableChars = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.!*@#?<> "];
   const bgm = {
      Stage1: document.getElementById("bgm_stage1"),
      Stage2: document.getElementById("bgm_stage2"),
@@ -552,13 +572,51 @@
   let keyPressed = {};  // 押下中かどうか
   let pausedDueToVisibility = false; // タブ非表示による一時停止かどうか
   let lastExplosionTime = 0;
+  
+  // ▼ ハイスコア保存用ロジック（localStorage使用）
+  const HIGH_SCORE_KEY = "yamamayu_high_scores";
+  const defaultHighScores = [
+    { name: "MOTH", score: 400000, rating: "SS" },
+    { name: "LMNG", score: 350000, rating: "S" },
+    { name: "KAIK", score: 300000, rating: "A" },
+    { name: "YMMY", score: 250000, rating: "B" },
+    { name: "OOMZ", score: 200000, rating: "C" }
+  ];
+
+  // ハイスコア取得
+  function loadHighScores() {
+    const json = localStorage.getItem(HIGH_SCORE_KEY);
+    return json ? JSON.parse(json) : defaultHighScores;
+  }
+
+  // ハイスコア保存
+  function saveHighScores(highScores) {
+    localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(highScores));
+  }
+
+  // 現在のハイスコア（5件以内）を保持
+  let highScores = loadHighScores();
+  let enteringName = false;
+  let nameChars = ["A", "A", "A", "A"];
+  let namePos = 0;
+
+  const ratingCoefficients = {
+    "SSS": 4.0,
+    "SS": 3.6,
+    "S": 3.2,
+    "A": 2.8,
+    "B": 2.4,
+    "C": 2.0,
+    "D": 1.6,
+    "E": 1.2
+  };
 
   const DOUBLE_TAP_MS = 200;    // 0.2 秒以内
   const STEP_PX       = 30;     // 1 ステップ距離
 
-window.addEventListener("load", () => {
-  if (bgm["stage1"]) bgm["stage1"].load(); // 読み込みだけしておく
-});
+  window.addEventListener("load", () => {
+    if (bgm["stage1"]) bgm["stage1"].load(); // 読み込みだけしておく
+  });
 /* =======================================================
    ▼ ゲーム開始／再スタート処理（BGMフェードイン対応）
    ======================================================= */
@@ -723,6 +781,15 @@ function checkStage(){
     setStageBackgroundSpeed(stage); // ← ここで背景スクロール速度を変更
   }
 }
+
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("nameEntryScreen").style.display = "none";
+  enteringName = false;
+  window.newHighScore = null;
+
+  // ← これを追加（スコア表示初期化）
+  displayTopHighScore();
+});
 /* =======================================================
    ▼ メインゲーム開始処理
    ======================================================= */
@@ -731,6 +798,7 @@ function startGame() {
   firstInteraction = true;
     // タイトル画面非表示
   const titleScreen = document.getElementById("titleScreen");
+  displayTopHighScore(); // ← 先に表示する（非表示にする前！）
   if (titleScreen) {
     titleScreen.style.display = "none";
     document.getElementById("moveInstruction").style.display = "none";
@@ -1761,6 +1829,18 @@ function getTimeRating(score, time) {
   return rating;
 }
 
+  function getRating(score, time) {
+    // ←このように追加
+    const spt = score / time;
+    if (spt >= 4000) return "SSS";
+    if (spt >= 3600) return "SS";
+    if (spt >= 3200) return "S";
+    if (spt >= 2800) return "A";
+    if (spt >= 2400) return "B";
+    if (spt >= 2000) return "C";
+    if (spt >= 1600) return "D";
+    return "E";
+  }
 /* =======================================================
    ▼ ゲームクリア処理
    ======================================================= */
@@ -1810,6 +1890,14 @@ function endGame() {
     gameClear.style.display = "flex";
     restartButton.style.display = "block";
     document.getElementById("thankYouText").style.display = "block";
+    
+    // ✅ 表示用ランキングを更新
+    displayHighScores();
+    
+    // ✅ UI表示が終わってからハイスコアチェックを呼ぶ
+    setTimeout(() => {
+      checkAndRegisterHighScore(score, rating);
+    }, 500); // 表示完了後、0.5秒で呼び出す
   }
   
   updateUI();
@@ -1993,6 +2081,180 @@ function loadAudio(audioEl) {
     audioEl.load();
   });
 }
+/* =======================================================
+   ▼ ハイスコア名前入力
+   ======================================================= */
+function checkAndRegisterHighScore(score, rating) {
+  console.log("✅ checkAndRegisterHighScore が呼ばれました");
+  console.log("🔍 score:", score, "rating:", rating);
+  console.log("💬 enteringName:", enteringName, "newHighScore:", window.newHighScore);
+  console.log("📌 gameStarted:", gameStarted, "gameOver:", gameOver);
+
+  const coefficient = ratingCoefficients[rating] || 1.0;
+  const newPower = score * coefficient;
+  console.log("🧮 評価係数:", coefficient, "→ パワー:", newPower);
+
+  // ⚠️ 前回の newHighScore が残っていたらクリア（念のため）
+  if (gameStarted && gameOver && !enteringName && window.newHighScore) {
+    console.log("🧹 前回の newHighScore をリセット");
+    window.newHighScore = null;
+  }
+
+  if (enteringName || window.newHighScore) {
+    console.log("⚠️ すでに名前登録中または完了済み。スキップします。");
+    return;
+  }
+  if (gameStarted === false || gameOver === false) {
+    console.log("⚠️ ゲームがまだ終了していません。スキップします。");
+    return;
+  }
+
+  if (score < 150000 || !ratingCoefficients[rating]) {
+    console.log("❌ スコアが基準未満か、評価係数が無効。");
+    return;
+  }
+
+  // 現在のハイスコアをパワー順にソート
+  highScores.sort((a, b) => {
+    const aPower = a.score * (ratingCoefficients[a.rating] || 1.0);
+    const bPower = b.score * (ratingCoefficients[b.rating] || 1.0);
+    return bPower - aPower;
+  });
+
+  const lowestPower = highScores.length < 5 ? 0 :
+    highScores[4].score * (ratingCoefficients[highScores[4].rating] || 1.0);
+
+  console.log("🏆 最下位Power:", lowestPower, "vs 今回のPower:", newPower);
+
+  if (newPower > lowestPower) {
+    console.log("🎉 ハイスコア入り判定成功！名前入力を表示します");
+
+    enteringName = true;
+    namePos = 0;
+    nameChars = ["A", "A", "A", "A"];
+    updateNameEntryDisplay();
+
+    const entryScreen = document.getElementById("nameEntryScreen");
+    if (entryScreen) {
+      entryScreen.style.display = "flex";
+      entryScreen.style.zIndex = "9999"; // 念のため
+    } else {
+      console.log("❗ nameEntryScreen が見つかりません！");
+    }
+
+    window.newHighScore = { score, rating };
+  } else {
+    console.log("⛔ ハイスコア入りせず。スキップします");
+  }
+}
+
+function updateNameEntryDisplay() {
+  const str = nameChars.map((c, i) => (i === namePos ? `[${c}]` : c)).join(" ");
+  document.getElementById("nameEntry").textContent = str;
+
+  // 決定ボタンのラベルを変更
+  const confirmBtn = document.getElementById("confirmButton");
+  if (confirmBtn) {
+    confirmBtn.textContent = (namePos === nameChars.length - 1) ? "決定" : "次へ";
+  }
+}
+
+function nextChar() {
+  if (!enteringName) return;
+  const idx = availableChars.indexOf(nameChars[namePos]);
+  const nextIdx = (idx + 1) % availableChars.length;
+  nameChars[namePos] = availableChars[nextIdx];
+  updateNameEntryDisplay();
+}
+
+function prevChar() {
+  if (!enteringName) return;
+  const idx = availableChars.indexOf(nameChars[namePos]);
+  const prevIdx = (idx - 1 + availableChars.length) % availableChars.length;
+  nameChars[namePos] = availableChars[prevIdx];
+  updateNameEntryDisplay();
+}
+
+function displayTopHighScore() {
+  const top = highScores[0];
+  if (!top) return;
+  const coeff = ratingCoefficients[top.rating] || 1.0;
+  const power = Math.floor(top.score * coeff);
+  const display = `${top.name}　${top.score.toLocaleString()}点　評価：${top.rating}`;
+  document.getElementById("topHighScore").textContent = display;
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("nameEntryScreen").style.display = "none";
+  enteringName = false;
+  window.newHighScore = null;
+
+  // ✅ タイトル画面にトップハイスコアを表示
+  displayTopHighScore();
+});
+
+function getRatingMultiplier(rating) {
+  return ratingCoefficients[rating] || 1.0;
+}
+
+function confirmNameEntry() {
+  if (!enteringName) return;
+
+  // 次の文字へ移動
+  namePos++;
+
+  if (namePos < nameChars.length) {
+    updateNameEntryDisplay();
+    return; // まだ未確定の文字があるので確定しない
+  }
+
+  // 4文字すべて確定済み
+  const name = nameChars.join("");
+  highScores.push({
+    name,
+    score: window.newHighScore.score,
+    rating: window.newHighScore.rating
+  });
+
+  // 再度ソート＆5件に絞る
+  highScores.sort((a, b) => {
+    const aPower = a.score * (ratingCoefficients[a.rating] || 1.0);
+    const bPower = b.score * (ratingCoefficients[b.rating] || 1.0);
+    return bPower - aPower;
+  });
+  highScores = highScores.slice(0, 5);
+  saveHighScores(highScores);
+
+  // UI処理
+  document.getElementById("nameEntryScreen").style.display = "none";
+  enteringName = false;
+
+  // 🎯 入力直後に即反映！
+  displayHighScores();
+
+  // 念のため newHighScore をリセット
+  window.newHighScore = null;
+
+  // ゲームクリア画面を表示（再表示）
+  gameClear.style.display = "flex";
+}
+
+
+/* =======================================================
+   ▼ ハイスコア表
+   ======================================================= */
+function displayHighScores() {
+  const scoreListEl = document.getElementById("scoreList");
+  if (!scoreListEl) return;
+
+  const ranks = highScores.map((entry, index) => {
+    const rating = getRating(entry.score / getRatingMultiplier(entry.rating));
+    return `${index + 1}. ${entry.name}：${entry.score}（${entry.rating}）`;
+  });
+
+  scoreListEl.innerHTML = `<p>🏆 High Scores</p>` + ranks.map(r => `<div>${r}</div>`).join("");
+}
+
 /* =======================================================
    ▼ スマホ自動拡大表示
    ======================================================= */
