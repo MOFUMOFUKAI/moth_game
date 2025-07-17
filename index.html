@@ -233,7 +233,7 @@
       display: none;
       position: absolute;
       left: 50%;
-      bottom: 6%; /* ゲーム画面の中央に表示 */
+      bottom: 2%; /* ゲーム画面の中央に表示 */
       transform: translate(-50%, -50%);
       padding: 8px 16px;
       font-size: 16px;
@@ -245,23 +245,6 @@
       cursor: pointer;
       pointer-events: auto;       /* タッチを確実に受け付ける */
       touch-action: manipulation; /* ← タップ反応を最適化（特にiOS） */
-    }
-    #exitButton {
-      display: none;
-      position: absolute;
-      left: 50%;
-      bottom: 0%;
-      transform: translate(-50%, -50%);
-      background-color: gray;
-      color: white;
-      margin-top: 10px;
-      padding: 8px 10px;
-      font-size: 10px;
-      border: none;
-      border-radius: 5px;
-      z-index: 9999; /* ← 最前面に持ってくる */
-      cursor: pointer;
-      pointer-events: auto;
     }
     #touchControls {
       display: flex;
@@ -402,6 +385,74 @@
      z-index: 999;
      pointer-events: none;
    }
+
+  .void-rank {
+    font-size: 28px;
+    color: gold;
+    text-shadow: 0 0 10px gold, 0 0 20px orange;
+    font-weight: bold;
+    animation: glow 1.5s infinite alternate;
+  }
+
+  .void-subtext {
+    font-size: 14px;
+    color: #ccc;
+    margin-top: 5px;
+  }
+
+  @keyframes glow {
+    from { text-shadow: 0 0 5px gold; }
+    to { text-shadow: 0 0 20px gold, 0 0 30px orange; }
+  }
+  
+#voidFeathers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.feather {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-image: url('eff_feather.png');
+  background-size: cover;
+  opacity: 1;
+  z-index: 99999;
+  pointer-events: none;
+  transform: translate(0, 0) rotate(0deg);
+  animation: featherFly var(--flyTime, 2s) ease-out forwards,
+             featherWobble 3s ease-in-out infinite;
+            
+}
+
+@keyframes featherFly {
+  0% {
+    transform: translate(0px, 0px) rotate(var(--startAngle));
+    opacity: 1;
+  }
+  10% {
+    transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 0.3px)) rotate(var(--midAngle));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)) rotate(var(--endAngle));
+    opacity: 0;
+  }
+}
+@keyframes featherWobble {
+  0%, 100% {
+    filter: brightness(1.8);
+  }
+  50% {
+    filter: brightness(2.3);
+  }
+}
+
   </style>
 </head>
 
@@ -409,7 +460,20 @@
 <!-- UIエリア（スコア） → 白枠の外、画面中央上 -->
 <div id="uiTop">
   <div id="score">スコア: 0</div>
-  
+  <div id="musicTitle" style="
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 18px;
+  font-family: monospace;
+  text-shadow: 0 0 6px black;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: 10;
+  pointer-events: none;
+"></div>
    <!-- ポーズ／再開ボタン（右上） -->
   <div id="pauseControls">
     <button id="pauseButton" title="ポーズ">⏸</button>
@@ -441,13 +505,14 @@
 
 <!-- ゲーム画面 -->
 <div id="game">
+ <!-- Vランク羽根演出 -->
+  <div id="voidFeathers" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:99999;"></div>
   <div id="background"></div>
   <div id="bgDarkenLayer"></div>
   <div id="player"></div>
   <div id="hitbox"></div>
   <div id="lives">❤️❤️❤️</div>
   <div id="screenFade"></div>
-
    <!-- レベル／経験値表示（白枠右上） -->
   <div id="levelExpRow">
     <span id="level">Lv.1</span>
@@ -465,6 +530,7 @@
     <audio id="bgm_stage2" loop><source src="bgm_stage2.mp3" type="audio/mpeg"></audio>
     <audio id="bgm_stage3" loop><source src="bgm_stage3.mp3" type="audio/mpeg"></audio>
     <audio id="bgm_final" loop><source src="bgm_final.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm_final2" loop><source src="bgm_final2.mp3" type="audio/mpeg"></audio>
     <audio id="bgm_result" loop>  <source src="bgm_result.mp3" type="audio/mpeg"></audio>
     <!-- SE -->
     <audio id="seParry"><source src="se_parry.mp3" type="audio/mpeg"></audio>
@@ -496,8 +562,6 @@
     </div>
     <!-- 再プレイボタン -->
     <button id="restartButton">再プレイ</button>
-    <!-- 終了ボタン -->
-    <button id="exitButton" style="display:none; background-color: gray; color: white; margin-top: 10px;">終了</button>
   </div> <!-- ← #game の閉じタグ -->
   
     <!-- ▼ ハイスコア名前入力UI（初期は非表示） -->
@@ -523,7 +587,6 @@
     <div id="parryInstruction" class="instruction title-only">パリィ／ジャストパリィ</div>
     <img id="btnParry" src="btn_parry.png" class="control-button">
   </div>
-
  <script>
   const game = document.getElementById("game");
   const player = document.getElementById("player");
@@ -532,12 +595,11 @@
   const livesEl = document.getElementById("lives");
   const timeEl = document.getElementById("time");
   const levelEl = document.getElementById("level");
+  const maxLevel = 7; 
   const expEl = document.getElementById("exp");
   const gameClear = document.getElementById("gameClear");
   const timeRatingEl = document.getElementById("timeRating");
   const restartButton = document.getElementById("restartButton");
-  const exitButton = document.getElementById("exitButton");
-
   const seParry = document.getElementById("seParry");
   const seBombL = document.getElementById("seBombL");
   const seDodge = document.getElementById("seDodge");
@@ -553,6 +615,7 @@
      Stage2: document.getElementById("bgm_stage2"),
      Stage3: document.getElementById("bgm_stage3"),
      Final:  document.getElementById("bgm_final"),
+     Final2: document.getElementById("bgm_final2"),
      Result: document.getElementById("bgm_result")
    };
   
@@ -588,6 +651,8 @@
   let obstacleTimerId      = null; // ★ setInterval の ID を保持
   let obstacleSpawnInterval = null;
   let isPaused = false;
+  let pauseStart = 0;
+  let totalPausedTime = 0;
 
   // 回避移動関連の変数
   let lastKey        = "";      // 直前の方向キー
@@ -626,8 +691,8 @@
   let namePos = 0;
 
   const ratingCoefficients = {
-    "SSS": 4.0,
-    "SS": 3.6,
+    "V": 4.0,
+    "U": 3.6,
     "S": 3.2,
     "A": 2.8,
     "B": 2.4,
@@ -702,7 +767,18 @@ function crossfadeBGM(fromAudio, toAudio, duration = 1500) {
     }
   }, stepTime);
 }
+/* =======================================================
+   ▼ 曲名表示
+   ======================================================= */
+function showMusicTitle(text) {
+  const titleEl = document.getElementById("musicTitle");
+  titleEl.textContent = text;
+  titleEl.style.opacity = 1;
 
+  setTimeout(() => {
+    titleEl.style.opacity = 0;
+  }, 5000);
+}
 /* =======================================================
    ▼ 背景スクロール速度
    ======================================================= */
@@ -733,6 +809,7 @@ function setStageBackgroundSpeed(stage) {
   else if (stage === 2) scrollSpeed = 0.5;
   else if (stage === 3) scrollSpeed = 0.8;
   else if (stage === 4) scrollSpeed = 2.0;
+  else if (stage === 5) scrollSpeed = 2.0; // ステージ4と同じ速度を維持
 }
 
 /* =======================================================
@@ -744,7 +821,7 @@ const FADE_MS = 1500;          // ←BGM の crossfadeBGM() と揃えていま�
 
 /**
  * 暗転 → 背景画像切替 → 明転
- * @param {number} nextStage 1〜4
+ * @param {number} nextStage 1〜5
  */
 function crossfadeBackground(nextStage){
   const bg    = document.getElementById("background");
@@ -779,21 +856,26 @@ function updateBackgroundInstant(stageNum) {
 /* ──────────────────────────────────────────────
      ステージ判定 &  ビジュアル/BGM 同期クロスフェード
    ────────────────────────────────────────────── */
-function checkStage(){
+function checkStage() {
   const prev = stage;
+
+  // 通常ステージ（1〜4）を段階的に判定
   stage =
+    score >= 600000 ? 5 :
     score >= 150000 ? 4 :
     score >= 100000 ? 3 :
     score >=  50000 ? 2 : 1;
 
   /* ─ ステージが変わったら ─ */
-  if (stage !== prev){
+  if (stage !== prev) {
 
     /* 背景をクロスフェード */
     crossfadeBackground(stage);
 
-    /* BGM もクロスフェード */
-    const targetBGM = [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Result][stage - 1];
+    // BGM切り替え対象をステージに応じて決定
+    const targetBGM =
+      stage === 5 ? bgm.Final2 :  // スコア60万以上：最終BGMに切替
+      [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final][stage - 1];
 
     if (!currentBGM){
       // 初回だけはボリューム 0→1 のフェードインで開始
@@ -804,6 +886,16 @@ function checkStage(){
 
     currentBGM = targetBGM;
     setStageBackgroundSpeed(stage); // ← ここで背景スクロール速度を変更
+    
+     // 🎵 曲名を表示
+    const musicTitles = {
+      1: "♪Starlight Vanguard",
+      2: "♪Brave Ascent",
+      3: "♪Voidborne Resolve",
+      4: "♪Burn the Void",
+      5: "♪Beyond the Edge"
+    };
+    showMusicTitle(musicTitles[stage]);
   }
 }
 
@@ -841,7 +933,7 @@ function startGame() {
   [seParry, seDodge, seBombL, seItem, seJustParry].forEach(se => se.volume = SE_VOLUME);
 
   // BGM は fadeInBGM / crossfadeBGM 内で targetVolume を読むようにする
-  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Result].forEach(bgm => {
+  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Final2, bgm.Result].forEach(bgm => {
     bgm.dataset.targetVolume = BGM_VOLUME;   // <- 目標音量を記憶
   });
   /* ★★★★★ ここまで音量プリセット ★★★★★ */
@@ -871,7 +963,7 @@ function startGame() {
   resetObstacleSpawn(); // ← ここだけにする 
   
   // BGM 初期化と再生
-  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Result].forEach(bgm => {
+  [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Final2, bgm.Result].forEach(bgm => {
     bgm.pause();
     bgm.currentTime = 0;
     bgm.volume = 0;
@@ -884,7 +976,7 @@ function startGame() {
   // UI 初期化
   gameClear.style.display = "none";
   restartButton.style.display = "none";
-  exitButton.style.display = "none"; // ← これを追加！
+//exitButton.style.display = "none"; // ← これを追加！
   updateUI();
 
   // タイマー再設定
@@ -909,13 +1001,6 @@ restartButton.addEventListener("touchstart", (e) => {
   startGame();
 });
 
-// スマホ対応：touchstartでも終了ボタンが効くように
-exitButton.addEventListener("click", handleExit);
-exitButton.addEventListener("touchstart", (e) => {
-  e.preventDefault();  // スマホ特有の挙動（フォーカス/拡大など）を防止
-  handleExit();
-});
-
 // タイトル画面：スマホ対応
 titleScreen.addEventListener("touchstart", () => {
   if (!gameStarted) startGame();
@@ -931,6 +1016,8 @@ function handleExit() {
    ▼ ポーズ機能処理
    ======================================================= */
 function pauseGame() {
+  pauseStart = Date.now(); 
+  
   clearInterval(obstacleGenerationInterval);
   clearInterval(scoreUpdateInterval);
   clearInterval(timeUpdateInterval);
@@ -967,6 +1054,9 @@ resumeButton.addEventListener("click", () => {
 
 // ▼ 再開処理（resumeGame）を追加
 function resumeGame() {
+  const pauseEnd = Date.now(); 
+  totalPausedTime += pauseEnd - pauseStart;
+  
   if (currentBGM) currentBGM.play();
 
   scoreUpdateInterval = setInterval(updateScore, 100);
@@ -1018,35 +1108,36 @@ function createObstacle() {
   speedScale = Math.min(speedScale, 10.0);
 
   // ステージ別出現内容
-  if (stage === 1) {
-    sizeOption = Math.random() < 0.6 ? "small" : "big";
+if (stage === 1) {
+  sizeOption = Math.random() < 0.6 ? "small" : "big";
+  colorClass = "red";
+  fallSpeed = sizeOption === "small" ? 4 * speedScale : 3 * speedScale;
+} else if (stage === 2) {
+  sizeOption = Math.random() < 0.7 ? "small" : "big";
+  colorClass = "blue";
+  fallSpeed = sizeOption === "small" ? 4 * speedScale : 5 * speedScale;
+} else if (stage === 3) {
+  sizeOption = Math.random() < 0.8 ? "big" : "huge";
+  colorClass = "green";
+  fallSpeed = sizeOption === "big" ? 5 * speedScale : 2 * speedScale;
+} else if (stage === 4 || stage === 5) { // ✅ ステージ4と5を統合
+  const randomChoice = Math.random();
+  if (randomChoice < 0.3) {
+    sizeOption = "huge";
     colorClass = "red";
-    fallSpeed = sizeOption === "small" ? 4 * speedScale : 3 * speedScale;
-  } else if (stage === 2) {
-    sizeOption = Math.random() < 0.7 ? "small" : "big";
+    fallSpeed = 3 * speedScale;
+  } else if (randomChoice < 0.4) {
+    sizeOption = "huge";
     colorClass = "blue";
-    fallSpeed = sizeOption === "small" ? 4 * speedScale : 5 * speedScale;
-  } else if (stage === 3) {
-    sizeOption = Math.random() < 0.8 ? "big" : "huge";
+    fallSpeed = 2 * speedScale;
+  } else {
+    sizeOption = "small";
     colorClass = "green";
-    fallSpeed = sizeOption === "big" ? 5 * speedScale : 2 * speedScale;
-  } else if (stage === 4) {
-    const randomChoice = Math.random();
-    if (randomChoice < 0.3) {
-      sizeOption = "huge";
-      colorClass = "red";
-      fallSpeed = 3 * speedScale;
-    } else if (randomChoice < 0.4) {
-      sizeOption = "huge";
-      colorClass = "blue";
-      fallSpeed = 2 * speedScale;
-    } else {
-      sizeOption = "small";
-      colorClass = "green";
-      fallSpeed = 6 * speedScale;
-    }
-    item.classList.add("stage4");
+    fallSpeed = 6 * speedScale;
   }
+  item.classList.add("stage4"); // ✅ 必要に応じて "stage5" に変更可（演出が違う場合）
+}
+
 
   // ▼ GIF画像の表示
   const img = document.createElement("img");
@@ -1190,7 +1281,9 @@ function updateObstacleIntervalByScore(score) {
 function updateStage() {
   const prev = stage;
 
-  if (score >= 150000) {
+  if (score >= 600000) {
+    stage = 5; // ✅ 新ステージ5
+  } else if (score >= 150000) {
     stage = 4;
   } else if (score >= 100000) {
     stage = 3;
@@ -1202,9 +1295,10 @@ function updateStage() {
 
   if (stage !== prev) {
     crossfadeBackground(stage);          // 背景のクロスフェード
-    setStageBackgroundSpeed(stage);      // ⬅️ これを追加（スクロール速度切替）
+    setStageBackgroundSpeed(stage);      // 背景スクロール速度変更
   }
 }
+
 
 /* =======================================================
    ▼ プレイヤー行動処理
@@ -1391,7 +1485,6 @@ btnParry.addEventListener("touchstart", e => {
 // 🔽 ポーズボタンでゲーム一時停止
 pauseButton.addEventListener("click", () => {
   isPaused = true;
-  pauseBGM();
   pauseOverlay.style.display = "flex";
   pauseButton.style.display = "none";
   resumeButton.style.display = "inline";
@@ -1400,7 +1493,6 @@ pauseButton.addEventListener("click", () => {
 // 🔽 再開ボタンでゲーム再開
 resumeButton.addEventListener("click", () => {
   isPaused = false;
-  resumeBGM();
   pauseOverlay.style.display = "none";
   pauseButton.style.display = "inline";
   resumeButton.style.display = "none";
@@ -1418,12 +1510,16 @@ setInterval(() => {
   function updateTime() {
     if (isPaused) return;
     if (gameOver) return; // ゲームオーバー時にはタイム更新しない
-    gameTime = (Date.now() - startTime);  // ミリ秒単位で経過時間を取得
+    gameTime = (Date.now() - startTime - totalPausedTime); // ✅ ポーズ時間を除外
     timeEl.innerHTML = `タイム: ${(gameTime / 1000).toFixed(3)}秒`;  // 小数点以下3桁で表示
+    
+      // 👇 ここにもログを追加
+//console.log("🕒 タイム進行中 gameTime =", gameTime);
   }
 
 // スコアの更新 ─ 100ms ごとに +10 加算し整数で表示 & ステージ/BGM 判定も実施
 function updateScore() {
+  if (isPaused) return;
   if (gameOver) return;                       // ゲームオーバー中は更新しない
 
   const elapsed = Date.now() - startTime;     // 経過ミリ秒
@@ -1458,13 +1554,13 @@ function updateUI() {
   levelEl.textContent = "Lv. " + level;
 
   // 経験値表示
-  if (level < 5) {
+  if (level < maxLevel) {
     expEl.textContent = `EXP: ${exp} / ${level * 200}`;
   } else {
     expEl.textContent = `EXP: MAX`;
   }
 
-  // スコア（必要に応じて）
+  // スコア表示
   scoreEl.textContent = "スコア: " + score;
 }
 
@@ -1472,26 +1568,21 @@ function updateUI() {
    ▼ 経験値追加
    ======================================================= */
 function addExp(amount) {
-  if (level >= 5) return;
+  if (level >= maxLevel) return;
+
   exp += amount;
   let threshold = level * 200;
 
-  while (exp >= threshold && level < 5) {
+  while (exp >= threshold && level < maxLevel) {
     exp -= threshold;
     level++;
     maxLives++;
-
-    // ライフを1増やすが、maxLivesを超えないようにする
     lives = Math.min(lives + 1, maxLives);
-
-    // 成長効果
     playerSpeed *= 1.05;
-
-    // 経験値再計算
     threshold = level * 200;
   }
 
-  updateUI(); // 忘れずにUI更新
+  updateUI();
 }
 /* =======================================================
    ▼ パリィ/ジャストパリィ
@@ -1776,6 +1867,7 @@ function reflectObstacle(obstacle, isRainbow) {
       let scoreAdd = 0;
       let expAdd = 0;
 
+        // 敵の得点と経験値
       if (stageType === 1 || stageType === 2) {
         scoreAdd = hp2 === 2 ? 1500 : 1000;
         expAdd = hp2 === 2 ? 15 : 10;
@@ -1848,7 +1940,7 @@ function getTimeRating(score, time) {
 
   // RANK基準（スコア÷タイム）
   if (scorePerTime >= 4.0) {
-    rating = "SSS";
+    rating = "V";
   } else if (scorePerTime >= 3.6) {
     rating = "SS";
   } else if (scorePerTime >= 3.2) {
@@ -1871,7 +1963,7 @@ function getTimeRating(score, time) {
   function getRating(score, time) {
     // ←このように追加
     const spt = score / time;
-    if (spt >= 4000) return "SSS";
+    if (spt >= 4000) return "V";
     if (spt >= 3600) return "SS";
     if (spt >= 3200) return "S";
     if (spt >= 2800) return "A";
@@ -1891,6 +1983,7 @@ function endGame() {
   bgm.Stage2.pause();
   bgm.Stage3.pause();
   bgm.Final.pause();
+  if (bgm.Final2) bgm.Final2.pause(); // ✅ 追加
 
   // 既に追加されたGame Overテキストがあれば削除
   const existingOver = document.getElementById("gameOverText");
@@ -1906,12 +1999,10 @@ function endGame() {
     gameOverText.style.color = "yellow";
     gameOverText.style.marginTop = "200px";
     game.appendChild(gameOverText);
-
+    
     gameClear.style.display = "none";
     restartButton.style.display = "block";
     restartButton.style.pointerEvents = "auto"; // スマホでも確実にタップ可能に
-    exitButton.style.display = "block";
-    exitButton.style.pointerEvents = "auto";
 
   } else {
     // ▼▼▼【ここに障害物削除処理を追加】▼▼▼
@@ -1922,19 +2013,33 @@ function endGame() {
     const clearTime = (gameTime / 1000).toFixed(3);
     const rating = getTimeRating(score, gameTime);
 
-//  console.log("スコア:", score);
-//  console.log("ゲームタイム（秒）:", clearTime);
-//  console.log("スコア ÷ タイム:", score / gameTime);
-//  console.log("RANK:", rating);
+    console.log("スコア:", score);
+    console.log("ゲームタイム（秒）:", clearTime);
+    console.log("スコア ÷ タイム:", score / gameTime);
+    console.log("RANK:", rating);
 
     timeRatingEl.textContent = `RANK: ${rating}`;
+    
+    // ✅ ▼▼▼ ここに Vランク演出を追加 ▼▼▼
+    if (rating.trim().toUpperCase() === "V") {
+      // ランク表示に特別な装飾を付加
+      timeRatingEl.classList.add("void-rank");
+      
+      // サブテキスト「V - VOID RANK」追加
+      const subtext = document.createElement("div");
+      subtext.textContent = "V - VOID RANK";
+      subtext.className = "void-subtext";
+      timeRatingEl.parentElement.appendChild(subtext);
+      
+      // 羽根演出を起動
+      triggerVoidFeathers();
+    }
+    // ✅ ▲▲▲ ここまで ▲▲▲
+    showMusicTitle("♪Twilight Flutter");
+    
     gameClear.style.display = "flex";
     restartButton.style.display = "block";
     document.getElementById("thankYouText").style.display = "block";
-    
-    // ✅ ここを追加！
-    exitButton.style.display = "block";
-    exitButton.style.pointerEvents = "auto";
     
     // ✅ 表示用ランキングを更新
     displayHighScores();
@@ -1959,6 +2064,62 @@ setInterval(() => {
     updateStage();
   }
 }, 1000);
+
+/* =======================================================
+   ▼Vランクの特殊羽根演出（新規追加関数）
+   ======================================================= */
+function triggerVoidFeathers() {
+  const container = document.getElementById("voidFeathers");
+  const game = document.getElementById("game");
+  if (!container || !game) return;
+
+  container.innerHTML = "";
+  container.style.display = "block";
+
+  const featherCount = 20;
+  const maxSpread = 240;
+  const gravityY = 30;
+
+  const gameRect = game.getBoundingClientRect();
+  const centerX = gameRect.width / 2;
+  const centerY = gameRect.height / 3;
+
+  for (let i = 0; i < featherCount; i++) {
+    const feather = document.createElement("div");
+    feather.className = "feather";
+
+    const angle = Math.PI + Math.random() * Math.PI;
+    const radius = Math.random() * maxSpread;
+    const dx = Math.cos(angle) * radius;
+    const dy = Math.sin(angle) * radius + 180;
+
+    const flyTimeSec = (5.0 + Math.random()).toFixed(2);
+    const rotateSpeedSec = (8.0 + Math.random() * 2).toFixed(2);
+
+    const startAngle = Math.floor(Math.random() * 360);
+    const midAngle = startAngle + (Math.random() * 60 - 30);
+    const endAngle = midAngle + (Math.random() * 60 - 30);
+
+    feather.style.setProperty("--dx", dx);
+    feather.style.setProperty("--dy", dy);
+    feather.style.setProperty("--flyTime", `${flyTimeSec}s`);
+    feather.style.setProperty("--rotateSpeed", `${rotateSpeedSec}s`);
+    feather.style.setProperty("--startAngle", `${startAngle}deg`);
+    feather.style.setProperty("--midAngle", `${midAngle}deg`);
+    feather.style.setProperty("--endAngle", `${endAngle}deg`);
+
+    feather.style.left = `${centerX}px`;
+    feather.style.top = `${centerY}px`;
+
+    // ✅ 正しい場所に追加（これが重要！）
+    game.appendChild(feather); 
+
+    // アニメ後削除
+    setTimeout(() => {
+      feather.remove();
+    }, parseFloat(flyTimeSec) * 1000 - 400);
+  }
+}
 
 /* =======================================================
    ▼ ハート生成
@@ -2360,6 +2521,7 @@ document.addEventListener("visibilitychange", () => {
   // 少し経ったら消えるように（デバッグ用途）
   setTimeout(() => box.remove(), 100);
 }*/
+
 </script>
 </body>
 </html>
