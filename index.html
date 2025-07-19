@@ -496,7 +496,7 @@
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.1.2.0<br>
+  Ver.1.2.1<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -781,7 +781,7 @@ function showMusicTitle(text) {
 
   setTimeout(() => {
     titleEl.style.opacity = 0;
-  }, 5000);
+  }, 7000);
 }
 /* =======================================================
    ▼ 背景スクロール速度
@@ -817,7 +817,7 @@ function setStageBackgroundSpeed(stage) {
 }
 
 /* =======================================================
-   ▼ 背景 & BGM クロスフェード付きステージ管理
+   ▼ 背景 クロスフェード付きステージ管理
    ======================================================= */
 
 /** 背景‐BGM クロスフェードの所要時間（ms） */
@@ -884,7 +884,8 @@ function checkStage() {
     if (!currentBGM){
       // 初回だけはボリューム 0→1 のフェードインで開始
       fadeInBGM(targetBGM, FADE_MS);
-    }else if (currentBGM !== targetBGM){
+      currentBGM = targetBGM; // ← 初回だけ代入
+    } else if (currentBGM !== targetBGM) {
       crossfadeBGM(currentBGM, targetBGM, FADE_MS);
     }
 
@@ -1054,6 +1055,18 @@ resumeButton.addEventListener("click", () => {
   pauseOverlay.style.display = "none";
   pauseButton.style.display = "inline";
   resumeButton.style.display = "none";
+});
+
+// ▼ タブ非アクティブ時に自動ポーズ（スマホアプリ切り替え含む）
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && !gamePaused && !gameOver && gameStarted) {
+    pauseGame();
+    gamePaused = true;
+
+    pauseOverlay.style.display = "block";
+    pauseButton.style.display = "none";
+    resumeButton.style.display = "inline";
+  }
 });
 
 // ▼ 再開処理（resumeGame）を追加
