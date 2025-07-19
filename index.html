@@ -466,13 +466,17 @@
   left: 50%;
   transform: translateX(-50%);
   color: white;
-  font-size: 18px;
+  font-size: 16px;
   font-family: monospace;
   text-shadow: 0 0 6px black;
   opacity: 0;
   transition: opacity 0.5s ease;
   z-index: 10;
   pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90vw;
 "></div>
    <!-- ポーズ／再開ボタン（右上） -->
   <div id="pauseControls">
@@ -1573,17 +1577,25 @@ function addExp(amount) {
   exp += amount;
   let threshold = level * 200;
 
+  let levelUps = 0;
+
   while (exp >= threshold && level < maxLevel) {
     exp -= threshold;
     level++;
     maxLives++;
-    lives = Math.min(lives + 1, maxLives);
+    levelUps++;
     playerSpeed *= 1.05;
     threshold = level * 200;
   }
 
+  // ライフ回復は最後に1回だけまとめて処理
+  if (levelUps > 0) {
+    lives = Math.min(lives + levelUps, maxLives);
+  }
+
   updateUI();
 }
+
 /* =======================================================
    ▼ パリィ/ジャストパリィ
    ======================================================= */
@@ -1933,45 +1945,19 @@ function reflectObstacle(obstacle, isRainbow) {
 /* =======================================================
    ▼ ゲームクリア時のRANK判定
    ======================================================= */
-function getTimeRating(score, time) {
-  const scorePerTime = score / time;  // スコア ÷ タイム（秒単位を想定）
+function getRating(score, time, isMillis = false) {
+  const timeInSeconds = isMillis ? time / 1000 : time;
+  const spt = score / timeInSeconds;
 
-  let rating = '';
-
-  // RANK基準（スコア÷タイム）
-  if (scorePerTime >= 4.0) {
-    rating = "V";
-  } else if (scorePerTime >= 3.6) {
-    rating = "SS";
-  } else if (scorePerTime >= 3.2) {
-    rating = "S";
-  } else if (scorePerTime >= 2.8) {
-    rating = "A";
-  } else if (scorePerTime >= 2.4) {
-    rating = "B";
-  } else if (scorePerTime >= 2.0) {
-    rating = "C";
-  } else if (scorePerTime >= 1.6) {
-    rating = "D";
-  } else {
-    rating = "E";
-  }
-
-  return rating;
+  if (spt >= 4000) return "V";
+  if (spt >= 3600) return "SS";
+  if (spt >= 3200) return "S";
+  if (spt >= 2800) return "A";
+  if (spt >= 2400) return "B";
+  if (spt >= 2000) return "C";
+  if (spt >= 1600) return "D";
+  return "E";
 }
-
-  function getRating(score, time) {
-    // ←このように追加
-    const spt = score / time;
-    if (spt >= 4000) return "V";
-    if (spt >= 3600) return "SS";
-    if (spt >= 3200) return "S";
-    if (spt >= 2800) return "A";
-    if (spt >= 2400) return "B";
-    if (spt >= 2000) return "C";
-    if (spt >= 1600) return "D";
-    return "E";
-  }
 /* =======================================================
    ▼ ゲームクリア処理
    ======================================================= */
@@ -2011,7 +1997,7 @@ function endGame() {
 
     // ゲームクリア処理
     const clearTime = (gameTime / 1000).toFixed(3);
-    const rating = getTimeRating(score, gameTime);
+    const rating = getRating(score, gameTime, true); // ミリ秒なので true を指定
 
     console.log("スコア:", score);
     console.log("ゲームタイム（秒）:", clearTime);
@@ -2472,7 +2458,6 @@ function displayHighScores() {
   if (!scoreListEl) return;
 
   const ranks = highScores.map((entry, index) => {
-    const rating = getRating(entry.score / getRatingMultiplier(entry.rating));
     return `${index + 1}. ${entry.name}：${entry.score}（${entry.rating}）`;
   });
 
