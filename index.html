@@ -414,6 +414,30 @@
   pointer-events: none;
   z-index: 9999;
 }
+.invincible-orb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: purple;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: rotateAround 1s linear infinite;
+}
+.orb1 { animation-delay: 0s; }
+.orb2 { animation-delay: 0.5s; }
+
+@keyframes rotateAround {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(30px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(30px) rotate(-360deg);
+  }
+}
 
 .feather {
   position: absolute;
@@ -496,7 +520,7 @@
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.1.2.1<br>
+  Ver.1.2.2<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -657,6 +681,10 @@
   let isPaused = false;
   let pauseStart = 0;
   let totalPausedTime = 0;
+  let superInvincible = false;
+  let orb1, orb2;
+  
+
 
   // 回避移動関連の変数
   let lastKey        = "";      // 直前の方向キー
@@ -1247,7 +1275,7 @@ if (stage === 1) {
 
     // 通常ヒット
     if (checkCollision(playerRect, itemRect)) {
-      if (!invincible) {
+      if (!invincible && !superInvincible) {  // ✅ ← 両方無敵でない場合のみダメージ
         const dmg = parseInt(item.dataset.hp);
         lives -= dmg;
         if (lives <= 0) endGame();
@@ -1722,6 +1750,26 @@ function showJustParry() {
   }
 
 /* =======================================================
+   ▼ 無敵処理
+   ======================================================= */
+function setSuperInvincible(duration = 15000) {
+  superInvincible = true;
+
+  orb1 = document.createElement("div");
+  orb2 = document.createElement("div");
+  orb1.className = "invincible-orb orb1";
+  orb2.className = "invincible-orb orb2";
+  player.appendChild(orb1);
+  player.appendChild(orb2);
+
+  setTimeout(() => {
+    superInvincible = false;
+    orb1?.remove();
+    orb2?.remove();
+  }, duration);
+}
+
+/* =======================================================
    ▼ 爆発発生処理
    ======================================================= */
 function createExplosion(x, y, scoreValue = 0, isJust = false, noExplosion = false, expValue = 0) {
@@ -1894,25 +1942,40 @@ function reflectObstacle(obstacle, isRainbow) {
       let expAdd = 0;
 
         // 敵の得点と経験値
-      if (stageType === 1 || stageType === 2) {
-        scoreAdd = hp2 === 2 ? 1500 : 1000;
-        expAdd = hp2 === 2 ? 15 : 10;
-      } else if (stageType === 3) {
-        scoreAdd = hp2 === 3 ? 2500 : 1500;
-        expAdd = hp2 === 3 ? 25 : 15;
-      } else if (stageType === 4) {
-        const imgSrc = other.querySelector("img")?.src || "";
-        if (hp2 === 3 && imgSrc.includes("enm_huge_B")) {
-          scoreAdd = 8000;
-          expAdd = 80;
-        } else if (hp2 === 3) {
-          scoreAdd = 5000;
-          expAdd = 50;
-        } else if (hp2 === 1) {
-          scoreAdd = 2000;
-          expAdd = 20;
-        }
-      }
+if (stageType === 1 || stageType === 2) {
+  scoreAdd = hp2 === 2 ? 1500 : 1000;
+  expAdd = hp2 === 2 ? 15 : 10;
+} else if (stageType === 3) {
+  scoreAdd = hp2 === 3 ? 2500 : 1500;
+  expAdd = hp2 === 3 ? 25 : 15;
+} else if (stageType === 4) {
+  const imgSrc = other.querySelector("img")?.src || "";
+  if (hp2 === 3 && imgSrc.includes("enm_huge_B")) {
+    scoreAdd = 8000;
+    expAdd = 80;
+  } else if (hp2 === 3) {
+    scoreAdd = 5000;
+    expAdd = 50;
+  } else if (hp2 === 1) {
+    scoreAdd = 2000;
+    expAdd = 20;
+  }
+} else if (stageType >= 5) {
+  const imgSrc = other.querySelector("img")?.src || "";
+  if (hp2 === 3 && imgSrc.includes("enm_huge_B")) {
+    scoreAdd = 9000;
+    expAdd = 90;
+  } else if (hp2 === 3) {
+    scoreAdd = 6000;
+    expAdd = 60;
+  } else if (hp2 === 2) {
+    scoreAdd = 4000;
+    expAdd = 40;
+  } else if (hp2 === 1) {
+    scoreAdd = 3000;
+    expAdd = 30;
+  }
+}
 
       if (isRainbow) {
         // ジャストパリィ
@@ -2061,9 +2124,10 @@ setInterval(() => {
   if (gameStarted && !gameOver) {
     maybeSpawnHeart(); // ハート生成
     maybeSpawnLemon(); // レモン生成
+    maybeSpawnGrape(); // ← ここに追加！
     updateStage();
   }
-}, 3000);
+}, 2000);
 
 /* =======================================================
    ▼Vランクの特殊羽根演出（新規追加関数）
@@ -2131,12 +2195,12 @@ function maybeSpawnHeart() {
 
   let isGold = false;
 
-  // 💛 ゴールドハート出現条件（ライフ1以下かつ2%）
-  if (lives <= 1 && Math.random() < 0.02) {
+  // 💛 ゴールドハート出現条件（ライフ1以下かつ5%）
+  if (lives <= 1 && Math.random() < 0.05) {
     isGold = true;
   }
-  // 💗 通常ハート出現条件（5%）
-  else if (Math.random() < 0.05) {
+  // 💗 通常ハート出現条件（18%）
+  else if (Math.random() < 0.10) {
     isGold = false;
   } else {
     return; // どちらも条件を満たさなければ出現しない
@@ -2205,7 +2269,8 @@ function maybeSpawnHeart() {
    ▼ レモン生成
    ======================================================= */
 function maybeSpawnLemon() {
-  if (lives === maxLives && Math.random() < 0.03) {
+  if (level >= maxLevel) return; // ✅ 最大レベルで🍋は出ない
+  if (lives === maxLives && Math.random() < 0.05) {
     if (isPaused) return;
     const lemon = document.createElement("div");
     lemon.classList.add("heal");
@@ -2281,6 +2346,76 @@ function loadImage(src) {
     img.src = src;
   });
 }
+
+/* =======================================================
+   ▼ グレープ生成
+   ======================================================= */
+function maybeSpawnGrape() {
+  if (gameOver || isPaused) return;
+  if (level < maxLevel) return;
+  if (Math.random() >= 0.03) return;
+
+  const grape = document.createElement("div");
+  grape.classList.add("heal");
+  grape.textContent = "🍇";
+  grape.style.left = Math.floor(Math.random() * 9) * 40 + "px";
+  grape.style.top = "0px";
+  game.appendChild(grape);
+
+  let grapeY = 0;
+  const grapeFall = setInterval(() => {
+    if (gameOver || !grape.parentElement) return clearInterval(grapeFall);
+    if (isPaused) return;
+
+    grapeY += 10; // 高速落下
+    grape.style.top = grapeY + "px";
+
+    const grapeRect = grape.getBoundingClientRect();
+    const playerRect = hitbox.getBoundingClientRect();
+    const gameRect = game.getBoundingClientRect();
+    const gx = grapeRect.left + grapeRect.width / 2 - gameRect.left;
+    const gy = grapeRect.top + grapeRect.height / 2 - gameRect.top;
+
+    // 🎯 取得処理
+    if (checkCollision(grapeRect, playerRect)) {
+      grape.remove();
+      clearInterval(grapeFall);
+
+      score += 15000;
+      updateUI();
+
+      if (seItem) {
+        seItem.currentTime = 0;
+        seItem.play().catch(e => console.warn("SE error:", e));
+      }
+
+      createExplosion(gx, gy, 15000, false, true);
+
+      // ✅ 無敵化処理
+      setSuperInvincible(15000);
+      return;
+    }
+
+    // 💥 反射障害物に当たると破壊
+    for (let obs of allObstacles) {
+      if (obs.dataset.type === "reflected") {
+        const oRect = obs.getBoundingClientRect();
+        if (checkCollision(grapeRect, oRect)) {
+          grape.remove();
+          clearInterval(grapeFall);
+          createExplosion(gx, gy);
+          return;
+        }
+      }
+    }
+
+    if (grapeY > 600) {
+      grape.remove();
+      clearInterval(grapeFall);
+    }
+  }, 30);
+}
+
 /* =======================================================
    ▼ アイテム取得SE
    ======================================================= */
