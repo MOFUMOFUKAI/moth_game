@@ -486,7 +486,7 @@
   <div id="score">スコア: 0</div>
   <div id="musicTitle" style="
   position: absolute;
-  top: 60px;
+  top: 500px;
   left: 50%;
   transform: translateX(-50%);
   color: white;
@@ -616,6 +616,9 @@
     <img id="btnParry" src="btn_parry.png" class="control-button">
   </div>
  <script>
+ /* =======================================================
+   ▼ ゲーム定数・設定値
+   ======================================================= */
   const game = document.getElementById("game");
   const player = document.getElementById("player");
   const hitbox = document.getElementById("hitbox");
@@ -625,7 +628,10 @@
   const levelEl = document.getElementById("level");
   const maxLevel = 7; 
   const expEl = document.getElementById("exp");
+  const PARRY_COOLDOWN = 450; // クールダウン時間 [ms]
+  const maxGauge = 3;
   const gameClear = document.getElementById("gameClear");
+  const scrollDuration = 120; // 背景スクロール速度（秒）
   const timeRatingEl = document.getElementById("timeRating");
   const restartButton = document.getElementById("restartButton");
   const seParry = document.getElementById("seParry");
@@ -633,11 +639,21 @@
   const seDodge = document.getElementById("seDodge");
   const seItem = document.getElementById("seItem");
   const seJustParry = document.getElementById("seJustParry");
+  const allObstacles = [];
   const btnLeft  = document.getElementById("btnLeft");
   const btnRight = document.getElementById("btnRight");
   const btnParry = document.getElementById("btnParry");
   const titleScreen = document.getElementById("titleScreen");
   const availableChars = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.!*@#?<> "];
+    // ▼ ハイスコア保存用ロジック（localStorage使用）
+  const HIGH_SCORE_KEY = "yamamayu_high_scores";
+  const defaultHighScores = [
+    { name: "MOTH", score: 400000, rating: "SS" },
+    { name: "LMNG", score: 350000, rating: "S" },
+    { name: "KAIK", score: 300000, rating: "A" },
+    { name: "YMMY", score: 250000, rating: "B" },
+    { name: "OOMZ", score: 200000, rating: "C" }
+  ];
   const bgm = {
      Stage1: document.getElementById("bgm_stage1"),
      Stage2: document.getElementById("bgm_stage2"),
@@ -647,7 +663,9 @@
      Result: document.getElementById("bgm_result")
    };
   
-
+ /* =======================================================
+   ▼ ▼ ゲーム進行状態（変化する値）
+   ======================================================= */
   let score = 0;
   let lives = 3;
   let maxLives = 3;
@@ -660,21 +678,20 @@
   let obstacleSpeed = 15;  // 障害物の速度
   let startTime = Date.now();  // ゲーム開始時の時間
   let gameTime = 0;  // 経過時間（ミリ秒）
+  let obstacleGenerationInterval;
+  let scoreUpdateInterval;
+  let timeUpdateInterval;
   let lastScoreUpdateTime = 0;  // 最後にスコアを更新したミリ秒
   let highScore = localStorage.getItem("highScore") || 0;
-  let parryGauge = 0;
-  const maxGauge = 3;
+  let parryGauge = 0; 
   let level = 1;
   let exp = 0;
-  const allObstacles = [];
   let stage = 1;
   let lastParryTime   = 0;   // 前回パリィを打ったタイムスタンプ
-  const PARRY_COOLDOWN = 450; // クールダウン時間 [ms]
   let firstInteraction = false;
   let currentBGM = null;
   let gameStarted = false;
   let gamePaused = false;
-  const scrollDuration = 120; // 背景スクロール速度（秒）
   let baseInterval   = 800;  // ★ 現在の間隔（初期 800ms）
   let obstacleTimerId      = null; // ★ setInterval の ID を保持
   let obstacleSpawnInterval = null;
@@ -683,10 +700,6 @@
   let totalPausedTime = 0;
   let superInvincible = false;
   let orb1, orb2;
-  
-
-
-  // 回避移動関連の変数
   let lastKey        = "";      // 直前の方向キー
   let lastKeyTime    = 0;       // 押下タイムスタンプ
   let isDodging      = false;   // 回避モーション中
@@ -695,16 +708,6 @@
   let pausedDueToVisibility = false; // タブ非表示による一時停止かどうか
   let lastExplosionTime = 0;
   
-  // ▼ ハイスコア保存用ロジック（localStorage使用）
-  const HIGH_SCORE_KEY = "yamamayu_high_scores";
-  const defaultHighScores = [
-    { name: "MOTH", score: 400000, rating: "SS" },
-    { name: "LMNG", score: 350000, rating: "S" },
-    { name: "KAIK", score: 300000, rating: "A" },
-    { name: "YMMY", score: 250000, rating: "B" },
-    { name: "OOMZ", score: 200000, rating: "C" }
-  ];
-
   // ハイスコア取得
   function loadHighScores() {
     const json = localStorage.getItem(HIGH_SCORE_KEY);
@@ -742,11 +745,6 @@
 /* =======================================================
    ▼ ゲーム開始／再スタート処理（BGMフェードイン対応）
    ======================================================= */
-
-// タイマーIDのグローバル定義
-let obstacleGenerationInterval;
-let scoreUpdateInterval;
-let timeUpdateInterval;
 
 // BGM フェードイン再生関数（volume 0 → 1）
 function fadeInBGM(audio, duration = 1000) {
@@ -809,7 +807,7 @@ function showMusicTitle(text) {
 
   setTimeout(() => {
     titleEl.style.opacity = 0;
-  }, 7000);
+  }, 5000);
 }
 /* =======================================================
    ▼ 背景スクロール速度
@@ -2189,9 +2187,9 @@ function triggerVoidFeathers() {
    ▼ ハート生成
    ======================================================= */
 function maybeSpawnHeart() {
+  if (gameOver || isPaused) return;
   // ライフが満タンの場合は何も出現しない
   if (lives >= maxLives) return;
-  if (isPaused) return;
 
   let isGold = false;
 
@@ -2269,9 +2267,9 @@ function maybeSpawnHeart() {
    ▼ レモン生成
    ======================================================= */
 function maybeSpawnLemon() {
+  if (gameOver || isPaused) return;
   if (level >= maxLevel) return; // ✅ 最大レベルで🍋は出ない
   if (lives === maxLives && Math.random() < 0.05) {
-    if (isPaused) return;
     const lemon = document.createElement("div");
     lemon.classList.add("heal");
     lemon.textContent = "🍋";
