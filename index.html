@@ -916,6 +916,7 @@ window.addEventListener("DOMContentLoaded", () => {
    ▼ メインゲーム開始処理
    ======================================================= */
 function startGame() {
+  if (enteringName) return; // ← ハイスコア名入力中なら無効化
   if (!gameOver && firstInteraction) return;
   firstInteraction = true;
     // タイトル画面非表示
@@ -1008,7 +1009,7 @@ restartButton.addEventListener("touchstart", (e) => {
 
 // タイトル画面：スマホ対応
 titleScreen.addEventListener("touchstart", () => {
-  if (!gameStarted) startGame();
+  if (!gameStarted && !enteringName) startGame();  // ← enteringName を追加
 });
 /* =======================================================
    ▼ ゲーム終了スマホ対応
@@ -1119,10 +1120,10 @@ function createObstacle() {
   // speedScaleをscoreに基づいて計算
   let speedScale = 1.0;
   if (score >= 150000) {
-    const additionalScale = Math.min(Math.floor(score / 150000) * 1.5, 6.0);
+    const additionalScale = Math.min(Math.floor(score / 150000) * 1.2, 7.0);
     speedScale += additionalScale;
   }
-  speedScale = Math.min(speedScale, 10.0);
+  speedScale = Math.min(speedScale, 8.0);
 
   // ステージ別出現内容
 if (stage === 1) {
@@ -1677,7 +1678,7 @@ function addExp(amount) {
         setTimeout(() => j.remove(), 600);
       }
     });
-  }, 80); // 判定タイミング
+  }, 100); // 判定タイミング
 
   // ---------------- ④ クールダウン解除 ----------------
   setTimeout(() => {
@@ -2062,7 +2063,7 @@ setInterval(() => {
     maybeSpawnLemon(); // レモン生成
     updateStage();
   }
-}, 1000);
+}, 3000);
 
 /* =======================================================
    ▼Vランクの特殊羽根演出（新規追加関数）
@@ -2461,7 +2462,6 @@ function confirmNameEntry() {
   // ゲームクリア画面を表示（再表示）
   gameClear.style.display = "flex";
 }
-
 
 /* =======================================================
    ▼ ハイスコア表
