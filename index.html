@@ -913,9 +913,9 @@ function checkStage() {
       currentBGM = targetBGM; // ← 初回だけ代入
     } else if (currentBGM !== targetBGM) {
       crossfadeBGM(currentBGM, targetBGM, FADE_MS);
+      currentBGM = targetBGM;
     }
 
-    currentBGM = targetBGM;
     setStageBackgroundSpeed(stage); // ← ここで背景スクロール速度を変更
     
      // 🎵 曲名を表示
