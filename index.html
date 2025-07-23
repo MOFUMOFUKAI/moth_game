@@ -210,16 +210,17 @@
       height: 100%;
       display: none;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
+      padding-top: 100px;
       text-align: center;
       color: yellow;
       background: rgba(0, 0, 0, 0.7);
-      font-size: 24px;
+      font-size: 22px;
       z-index: 20;
       pointer-events: none; 
     }
     #thankYouText {
-      font-size: 36px;
+      font-size: 32px;
       margin-bottom: 10px;
     }
     #timeRating {
@@ -957,6 +958,7 @@ function startGame() {
   allObstacles.length = 0;
   scrollBackground();
   
+  
   /* ★★★★★ ここから音量プリセット ★★★★★ */
   const BGM_VOLUME = 0.8;   // ← 好みに合わせて数値を変える
   const SE_VOLUME  = 0.8;   // ← SE 全般の基本音量
@@ -1009,6 +1011,7 @@ function startGame() {
   gameClear.style.display = "none";
   restartButton.style.display = "none";
 //exitButton.style.display = "none"; // ← これを追加！
+  pauseButton.style.display = "inline";
   updateUI();
 
   // タイマー再設定
@@ -1074,7 +1077,7 @@ pauseButton.addEventListener("click", () => {
 });
 
 resumeButton.addEventListener("click", () => {
-  if (gameOver || !gamePaused) return;
+  if (gameOver || gamePaused) return;
 
   gamePaused = false;
   resumeGame();
@@ -2063,12 +2066,14 @@ function endGame() {
     
     gameClear.style.display = "none";
     restartButton.style.display = "block";
-    restartButton.style.pointerEvents = "auto"; // スマホでも確実にタップ可能に
-
+    restartButton.style.pointerEvents = "auto"; 
+    
+    pauseButton.style.display = "none";
   } else {
     // ▼▼▼【ここに障害物削除処理を追加】▼▼▼
     allObstacles.forEach(obj => obj.remove());
     allObstacles.length = 0;
+    
 
     // ゲームクリア処理
     const clearTime = (gameTime / 1000).toFixed(3);
@@ -2114,6 +2119,8 @@ function endGame() {
     bgm.Result.currentTime = 0;
     bgm.Result.volume = 0.8;
     bgm.Result.play();
+    
+    pauseButton.style.display = "none"; 
   
   updateUI();
 }
@@ -2125,7 +2132,7 @@ setInterval(() => {
     maybeSpawnGrape(); // ← ここに追加！
     updateStage();
   }
-}, 2000);
+}, 2500);
 
 /* =======================================================
    ▼Vランクの特殊羽根演出（新規追加関数）
@@ -2365,7 +2372,7 @@ function maybeSpawnGrape() {
     if (gameOver || !grape.parentElement) return clearInterval(grapeFall);
     if (isPaused) return;
 
-    grapeY += 10; // 高速落下
+    grapeY += 5; // やや高速落下
     grape.style.top = grapeY + "px";
 
     const grapeRect = grape.getBoundingClientRect();
