@@ -1336,7 +1336,7 @@ function isRightKey(key) {
   return key === "ArrowRight" || key === "d" || key === "D";
 }
 
-// 回避移動
+// 回避移動（2連打 dodge）
 function dodge(dir) {
   if (isDodging) return;
   isDodging = true;
@@ -1371,8 +1371,8 @@ function dodge(dir) {
   }, 300);
 }
 
-// 残像
-function spawnAfterImage(xPos){
+// 残像生成
+function spawnAfterImage(xPos) {
   const img = document.createElement("div");
   img.className = "afterimage";
   img.style.left = xPos + "px";
@@ -1384,7 +1384,7 @@ function spawnAfterImage(xPos){
 }
 
 // 通常移動
-function stepMove(dir){
+function stepMove(dir) {
   if (gameOver || isPaused) return;
   const delta = speedBoost ? playerSpeed * 2 : playerSpeed;
   const prevX = playerX;
@@ -1408,13 +1408,12 @@ document.addEventListener("keydown", e => {
     return;
   }
 
-  const isLeft  = isLeftKey(key);
+  const isLeft = isLeftKey(key);
   const isRight = isRightKey(key);
   if (!isLeft && !isRight) return;
 
   const dirKey = isLeft ? "ArrowLeft" : "ArrowRight";
 
-  // 長押しでは dodge 発動しない
   if (!e.repeat) {
     const now = performance.now();
     if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS) {
@@ -1435,7 +1434,7 @@ document.addEventListener("keyup", e => {
   if (isRightKey(key)) keyPressed["ArrowRight"] = false;
 });
 
-// 通常移動ループ
+// 移動ループ
 function continuousMoveLoop() {
   if (!isPaused && !gameOver) {
     if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
@@ -1445,7 +1444,7 @@ function continuousMoveLoop() {
 }
 continuousMoveLoop();
 
-// クリック／タップでパリィ
+// パリィ操作（マウス／タッチ共通）
 game.addEventListener("mousedown", () => {
   if (!gameOver) activateParry();
 });
@@ -1454,7 +1453,7 @@ game.addEventListener("touchstart", e => {
   if (!gameOver) activateParry();
 });
 
-// タッチ長押し（スマホ）
+// タッチ長押し処理（スマホ用）
 function startTouchHold(dirKey) {
   isTouchHolding = true;
   stopTouchHold();
@@ -1470,7 +1469,7 @@ function stopTouchHold() {
   keyPressed["ArrowRight"] = false;
 }
 
-// タッチボタン
+// タッチ操作ボタン（矢印）
 btnLeft.addEventListener("touchstart", e => {
   e.preventDefault(); startTouchHold("ArrowLeft");
 });
@@ -1487,11 +1486,12 @@ btnRight.addEventListener("touchend", e => {
 });
 btnRight.addEventListener("touchcancel", stopTouchHold);
 
+// パリィボタン（スマホ）
 btnParry.addEventListener("touchstart", e => {
   e.preventDefault(); activateParry();
 });
 
-// ポーズ制御
+// ポーズ処理
 pauseButton.addEventListener("click", () => {
   isPaused = true;
   pauseOverlay.style.display = "flex";
@@ -1504,7 +1504,6 @@ resumeButton.addEventListener("click", () => {
   pauseButton.style.display = "inline";
   resumeButton.style.display = "none";
 });
-
 /* ★★★★★★★★★★  入力ハンドラここまで  ★★★★★★★★★★ */
 
   // タイムの更新（ミリ秒単位）
