@@ -219,10 +219,14 @@
       z-index: 20;
       pointer-events: none; 
     }
-    #thankYouText {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
+   #thankYouText {
+     font-size: clamp(18px, 6vw, 32px);  /* ← 画面幅に応じて自動縮小 */
+     margin-bottom: 10px;
+     white-space: nowrap;
+     overflow: hidden;
+     text-overflow: ellipsis;
+     max-width: 100%;
+   }
     #timeRating {
       font-size: 30px;
       margin-bottom: 10px;
