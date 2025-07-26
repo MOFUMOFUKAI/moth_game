@@ -708,6 +708,8 @@
   let keyPressed = {};  // 押下中かどうか
   let pausedDueToVisibility = false; // タブ非表示による一時停止かどうか
   let lastExplosionTime = 0;
+  let isTouchHolding = false;
+  let touchHoldInterval = null;
   
   // ハイスコア取得
   function loadHighScores() {
