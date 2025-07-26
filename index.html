@@ -1456,7 +1456,7 @@ game.addEventListener("touchstart", e => {
   if (!gameOver) activateParry();
 });
 
-// 🔄 タッチボタン（スマホ用）押しっぱ＆ダブルタップ対応
+// タッチ長押しによる移動ループ（スマホ）
 function startTouchHold(dirKey) {
   isTouchHolding = true;
   stopTouchHold();  // 前のループをクリア
@@ -1474,13 +1474,13 @@ function stopTouchHold() {
   keyPressed["ArrowRight"] = false;
 }
 
-// 🔁 スマホダブルタップ＆移動兼用ハンドラー（復活版）
+// 🔁 ダブルタップ＆通常移動の兼用処理（スマホ用）
 function handleTap(dirKey) {
   const now = performance.now();
-  if (isTouchHolding) return; // 押しっぱ中は無視
+  if (isTouchHolding) return; // 押しっぱ中はダブルタップ無視
 
   if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS) {
-    dodge(dirKey); // 回避移動
+    dodge(dirKey); // 2連打で回避移動
     lastKey = "";
   } else {
     lastKey = dirKey;
@@ -1489,29 +1489,59 @@ function handleTap(dirKey) {
   }
 }
 
-// 左ボタン
+// 左ボタン（タッチ）
 btnLeft.addEventListener("touchstart", e => {
   e.preventDefault();
   startTouchHold("ArrowLeft");
-});
+}, { passive: false });
+
 btnLeft.addEventListener("touchend", e => {
   e.preventDefault();
   stopTouchHold();
   handleTap("ArrowLeft");
-});
+}, { passive: false });
+
 btnLeft.addEventListener("touchcancel", stopTouchHold);
 
-// 右ボタン
+// 右ボタン（タッチ）
 btnRight.addEventListener("touchstart", e => {
   e.preventDefault();
   startTouchHold("ArrowRight");
-});
+}, { passive: false });
+
 btnRight.addEventListener("touchend", e => {
   e.preventDefault();
   stopTouchHold();
   handleTap("ArrowRight");
-});
+}, { passive: false });
+
 btnRight.addEventListener("touchcancel", stopTouchHold);
+
+// パリィボタン（タッチ）
+btnParry.addEventListener("touchstart", e => {
+  e.preventDefault();
+  activateParry();
+}, { passive: false });
+
+// パリィ：ゲーム画面タップでも発動（スマホ）
+game.addEventListener("touchstart", e => {
+  e.preventDefault();
+  if (!gameOver) activateParry();
+}, { passive: false });
+
+// ポーズ処理
+pauseButton.addEventListener("click", () => {
+  isPaused = true;
+  pauseOverlay.style.display = "flex";
+  pauseButton.style.display = "none";
+  resumeButton.style.display = "inline";
+});
+resumeButton.addEventListener("click", () => {
+  isPaused = false;
+  pauseOverlay.style.display = "none";
+  pauseButton.style.display = "inline";
+  resumeButton.style.display = "none";
+});
 
 
 // ポーズ制御
