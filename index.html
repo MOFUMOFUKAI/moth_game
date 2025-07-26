@@ -203,6 +203,9 @@
       font-size: 20px;
       z-index: 5;
     }
+    #comboText {
+      position: absolute;
+    }
     #gameClear, #gameOver {
       position: absolute;
       left: 0;
@@ -525,7 +528,7 @@
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.1.2.3<br>
+  Ver.1.2.4<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -669,7 +672,7 @@
    };
   
  /* =======================================================
-   ▼ ▼ ゲーム進行状態（変化する値）
+    ▼ ゲーム進行状態（変化する値）
    ======================================================= */
   let score = 0;
   let lives = 3;
@@ -700,6 +703,7 @@
   let baseInterval   = 800;  // ★ 現在の間隔（初期 800ms）
   let obstacleTimerId      = null; // ★ setInterval の ID を保持
   let obstacleSpawnInterval = null;
+  let itemFallTimers = []; // 💡 すべての落下アイテムの fall ID をここに記録
   let isPaused = false;
   let pauseStart = 0;
   let totalPausedTime = 0;
@@ -714,6 +718,14 @@
   let lastExplosionTime = 0;
   let isTouchHolding = false;
   let touchHoldInterval = null;
+  // ==== Combo System Globals ====
+  let currentComboCount = 0;        // 今のヒット数（2以上から）
+  let comboInProgress = false;      // コンボ中か
+  let comboLastUpdateTime = 0;      // 最後のヒット時刻（ミリ秒）
+  let comboReflectedCount = 0;      // 現在アクティブな反射弾の数
+  let comboBonusGiven = false;      // ボーナスが既に表示されたか
+  let comboWatcherStarted = false;  // ✅ ← これを忘れずに追加
+  let comboEndTimeout = null;
   
   // ハイスコア取得
   function loadHighScores() {
@@ -745,7 +757,7 @@
 
   const DOUBLE_TAP_MS = 200;    // 0.2 秒以内
   const STEP_PX       = 30;     // 1 ステップ距離
-
+  
   window.addEventListener("load", () => {
     if (bgm["stage1"]) bgm["stage1"].load(); // 読み込みだけしておく
   });
@@ -942,7 +954,6 @@ window.addEventListener("DOMContentLoaded", () => {
   enteringName = false;
   window.newHighScore = null;
 
-  // ← これを追加（スコア表示初期化）
   displayTopHighScore();
 });
 /* =======================================================
@@ -952,7 +963,8 @@ function startGame() {
   if (enteringName) return; // ← ハイスコア名入力中なら無効化
   if (!gameOver && firstInteraction) return;
   firstInteraction = true;
-    // タイトル画面非表示
+
+  // タイトル画面非表示
   const titleScreen = document.getElementById("titleScreen");
   displayTopHighScore(); // ← 先に表示する（非表示にする前！）
   if (titleScreen) {
@@ -960,55 +972,51 @@ function startGame() {
     document.getElementById("moveInstruction").style.display = "none";
     document.getElementById("parryInstruction").style.display = "none";
   }
+
   allObstacles.forEach(obj => obj.remove());
   allObstacles.length = 0;
   scrollBackground();
-  
-  
-  /* ★★★★★ ここから音量プリセット ★★★★★ */
-  const BGM_VOLUME = 0.8;   // ← 好みに合わせて数値を変える
-  const SE_VOLUME  = 0.8;   // ← SE 全般の基本音量
 
-  // 必要な SE が増えたら配列に追加して下さい
+  /* ★★★★★ ここから音量プリセット ★★★★★ */
+  const BGM_VOLUME = 0.8;
+  const SE_VOLUME  = 0.8;
+
   [seParry, seDodge, seBombL, seItem, seJustParry].forEach(se => se.volume = SE_VOLUME);
 
-  // BGM は fadeInBGM / crossfadeBGM 内で targetVolume を読むようにする
   [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Final2, bgm.Result].forEach(bgm => {
-    bgm.dataset.targetVolume = BGM_VOLUME;   // <- 目標音量を記憶
+    bgm.dataset.targetVolume = BGM_VOLUME;
   });
   /* ★★★★★ ここまで音量プリセット ★★★★★ */
-  
+
   // スクロール速度とオフセット・レベル・経験値などを初期化
   level = 1;
   exp = 0;
   maxLives = 3;
   lives = maxLives;
   playerSpeed = 3;
-  scrollSpeed = 0.3;        // ステージ1の速度に戻す
-  backgroundOffset = 0;     // 背景位置もリセット
+  scrollSpeed = 0.3;
+  backgroundOffset = 0;
 
-  setStageBackgroundSpeed(1);  // 明示的にステージ1として速度設定（←より堅実）
-  // 背景画像を即表示（ゲーム開始直後に1枚目を表示）
-  updateBackgroundInstant(1); 
-  
+  setStageBackgroundSpeed(1);
+  updateBackgroundInstant(1);
+
   // 変数初期化
   gameOver = false;
   gameStarted = true; 
   score = 0;
-  lives = maxLives = 3;
   parryGauge = 0;
   startTime = Date.now();
-  lastScoreUpdateTime = 0;        // ✅ ← これを追加（スコア加算再開のため）
-  gameTime = 0;                   // ✅ ← タイムもゼロからスタート
-  resetObstacleSpawn(); // ← ここだけにする 
-  
+  lastScoreUpdateTime = 0;
+  gameTime = 0;
+  resetObstacleSpawn();
+
   // BGM 初期化と再生
   [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Final2, bgm.Result].forEach(bgm => {
     bgm.pause();
     bgm.currentTime = 0;
     bgm.volume = 0;
   });
-  
+
   stage = 0;
   currentBGM = null;
   checkStage();
@@ -1016,7 +1024,7 @@ function startGame() {
   // UI 初期化
   gameClear.style.display = "none";
   restartButton.style.display = "none";
-//exitButton.style.display = "none"; // ← これを追加！
+  //exitButton.style.display = "none"; // ← コメントアウト済みなら有効化してOK
   pauseButton.style.display = "inline";
   updateUI();
 
@@ -1027,6 +1035,19 @@ function startGame() {
 
   scoreUpdateInterval = setInterval(updateScore, 100);
   timeUpdateInterval = setInterval(updateTime, 30);
+
+  // 🔁 ステップ⑤：コンボ監視ループ（1回だけ実行）
+  if (!comboWatcherStarted) {
+    comboWatcherStarted = true;
+    setInterval(() => {
+      if (!comboInProgress) return;
+
+      const now = Date.now();
+      if (comboReflectedCount <= 0 && now - comboLastUpdateTime > 300) {
+        finishComboBonus();
+      }
+    }, 100);
+  }
 }
 
 // 最初の入力で起動
@@ -1307,6 +1328,143 @@ function updateObstacleIntervalByScore(score) {
 }
 
 /* =======================================================
+   ▼ アイテム生成と落下処理本体
+   ======================================================= */
+function spawnFallingItem(type) {
+  const config = {
+    heart: {
+      emoji: "💗",
+      speed: 5,
+      condition: () => lives < maxLives && Math.random() < 0.10,
+      onCollect: () => {
+        lives = Math.min(lives + 1, maxLives);
+        updateUI();
+      }
+    },
+    goldHeart: {
+      emoji: "💛",
+      speed: 8,
+      condition: () => lives <= 1 && Math.random() < 0.05,
+      onCollect: () => {
+        lives = maxLives;
+        updateUI();
+      }
+    },
+    lemon: {
+      emoji: "🍋",
+      speed: 5,
+      condition: () => level < maxLevel && lives === maxLives && Math.random() < 0.05,
+      onCollect: (x, y) => {
+        const scoreAdd = 10000, expAdd = 300;
+        createExplosion(x, y, scoreAdd, false, true, expAdd);
+        score += scoreAdd;
+        addExp(expAdd);
+        updateUI();
+      }
+    },
+    grape: {
+      emoji: "🍇",
+      speed: 5,
+      condition: () => level >= maxLevel && Math.random() < 0.05,
+      onCollect: (x, y) => {
+        createExplosion(x, y, 15000, false, true);
+        score += 15000;
+        updateUI();
+        setSuperInvincible(15000);
+      }
+    }
+  };
+
+  const itemData = config[type];
+  if (!itemData || !itemData.condition() || gameOver || isPaused) return;
+
+  const el = document.createElement("div");
+  el.classList.add("heal"); // 共通クラス名（削除時に一括指定可能）
+  el.textContent = itemData.emoji;
+  el.style.left = Math.floor(Math.random() * 9) * 40 + "px";
+  el.style.top = "0px";
+  game.appendChild(el);
+
+  let y = 0;
+
+  const fall = setInterval(() => {
+    if (gameOver || !el.parentElement) return clearFall();
+    if (isPaused) return;
+
+    y += itemData.speed;
+    el.style.top = y + "px";
+
+    const itemRect = el.getBoundingClientRect();
+    const playerRect = hitbox.getBoundingClientRect();
+    const gameRect = game.getBoundingClientRect();
+    const centerX = itemRect.left + itemRect.width / 2 - gameRect.left;
+    const centerY = itemRect.top + itemRect.height / 2 - gameRect.top;
+
+    // プレイヤーと衝突
+    if (checkCollision(itemRect, playerRect)) {
+      el.remove();
+      clearFall();
+      if (seItem) {
+        seItem.currentTime = 0;
+        seItem.play().catch(e => console.warn("SE error:", e));
+      }
+      itemData.onCollect?.(centerX, centerY);
+      return;
+    }
+
+    // 反射障害物との衝突
+    for (let obs of allObstacles) {
+      if (obs.dataset.type === "reflected") {
+        const obsRect = obs.getBoundingClientRect();
+        if (checkCollision(itemRect, obsRect)) {
+          el.remove();
+          clearFall();
+          createExplosion(centerX, centerY);
+          return;
+        }
+      }
+    }
+
+    // 画面外に出たら削除
+    if (y > 600) {
+      el.remove();
+      clearFall();
+    }
+  }, 30);
+
+  itemFallTimers.push(fall);
+
+  // 安全にタイマー解除＋リストから削除
+  function clearFall() {
+    clearInterval(fall);
+    itemFallTimers = itemFallTimers.filter(id => id !== fall);
+  }
+}
+/* =======================================================
+   ▼ ハート/レモン/グレープ生成の元コード置き換え
+   ======================================================= */
+function maybeSpawnHeart() {
+  spawnFallingItem("goldHeart");
+  spawnFallingItem("heart");
+}
+function maybeSpawnLemon() {
+  spawnFallingItem("lemon");
+}
+function maybeSpawnGrape() {
+  spawnFallingItem("grape");
+}
+/* =======================================================
+   ▼ アイテム取得SE
+   ======================================================= */
+function loadAudio(audioEl) {
+  return new Promise((resolve, reject) => {
+    audioEl.oncanplaythrough = resolve;
+    audioEl.onerror = reject;
+    audioEl.load();
+  });
+}
+
+/* =======================================================
    ▼ ステージ進行
    ======================================================= */
 function updateStage() {
@@ -1329,7 +1487,6 @@ function updateStage() {
     setStageBackgroundSpeed(stage);      // 背景スクロール速度変更
   }
 }
-
 
 /* =======================================================
    ▼ プレイヤー行動処理
@@ -1600,57 +1757,6 @@ function updateScore() {
 }
 
 /* =======================================================
-   ▼ UIの更新処理
-   ======================================================= */
-function updateUI() {
-  // ハートの数表示（負のrepeat対策あり）
-  livesEl.innerHTML =
-    "❤️".repeat(Math.max(0, lives)) +
-    "🖤".repeat(Math.max(0, maxLives - lives));
-
-  // レベル表示
-  levelEl.textContent = "Lv. " + level;
-
-  // 経験値表示
-  if (level < maxLevel) {
-    expEl.textContent = `EXP: ${exp} / ${level * 200}`;
-  } else {
-    expEl.textContent = `EXP: MAX`;
-  }
-
-  // スコア表示
-  scoreEl.textContent = "スコア: " + score;
-}
-
-/* =======================================================
-   ▼ 経験値追加
-   ======================================================= */
-function addExp(amount) {
-  if (level >= maxLevel) return;
-
-  exp += amount;
-  let threshold = level * 200;
-
-  let levelUps = 0;
-
-  while (exp >= threshold && level < maxLevel) {
-    exp -= threshold;
-    level++;
-    maxLives++;
-    levelUps++;
-    playerSpeed *= 1.05;
-    threshold = level * 200;
-  }
-
-  // ライフ回復は最後に1回だけまとめて処理
-  if (levelUps > 0) {
-    lives = Math.min(lives + levelUps, maxLives);
-  }
-
-  updateUI();
-}
-
-/* =======================================================
    ▼ パリィ/ジャストパリィ
    ======================================================= */
    function activateParry() {
@@ -1845,6 +1951,190 @@ function safeCreateExplosion(x, y, score, isJust, isBomb, exp) {
 
   createExplosion(x, y, score, isJust, isBomb, exp);
 }
+
+/* =======================================================
+   ▼ コンボ数表示の更新（画面右上に ○Hits!）
+   ======================================================= */
+function updateComboDisplay(currentComboCount) {
+  if (currentComboCount < 2) return; // ✅ 1Hits! は表示しない
+
+  const cappedCount = Math.min(currentComboCount, 50); // ✅ 上限50Hits!
+
+  let comboText = document.getElementById("comboText");
+  if (!comboText) {
+    comboText = document.createElement("div");
+    comboText.id = "comboText";
+    game.appendChild(comboText);
+  }
+
+  // ✅ 毎回スタイルを上書き（CSS影響を受けない）
+  comboText.style.position = "absolute";
+  comboText.style.top = "80px";           // ← 表示位置を確実に反映
+  comboText.style.right = "10px";
+  comboText.style.fontSize = "24px";
+  comboText.style.fontWeight = "bold";
+  comboText.style.color = "cyan";
+  comboText.style.zIndex = "100";
+  comboText.style.pointerEvents = "none";
+  comboText.style.textShadow = "1px 1px 2px black";
+
+  comboText.style.display = "block";
+  comboText.textContent = `${cappedCount} Hits!`; // ← 表示にも上限反映
+
+  // ✅ コンボ終了タイマーの制御（300ms後にフィニッシュ処理）
+  if (comboEndTimeout) clearTimeout(comboEndTimeout);
+  comboEndTimeout = setTimeout(() => {
+    finishComboBonus();
+    comboEndTimeout = null;
+  }, 600);
+}
+
+/* =======================================================
+   ▼ コンボ数表示
+   ======================================================= */
+function createComboText(x, y, hits) {
+  if (hits < 2) return; // ✅ 1Hits! は表示しない
+
+  const comboText = document.createElement("div");
+  comboText.textContent = `${hits} Hits!`;
+  comboText.style.position = "absolute";
+  comboText.style.left = `${x}px`;
+  comboText.style.top = `${y}px`;
+  comboText.style.fontSize = "22px";
+  comboText.style.fontWeight = "bold";
+  comboText.style.color = "cyan";
+  comboText.style.textShadow = "1px 1px 2px black";
+  comboText.style.pointerEvents = "none";
+  comboText.style.zIndex = "100";
+  comboText.style.opacity = "1";
+  comboText.style.transform = "translateY(0)";
+  comboText.style.transition = "transform 0.6s ease-out, opacity 0.6s ease-out";
+
+  document.getElementById("game").appendChild(comboText);
+
+  setTimeout(() => {
+    comboText.style.transform = "translateY(-30px)";
+    comboText.style.opacity = "0";
+  }, 10);
+
+  setTimeout(() => {
+    comboText.remove();
+  }, 800);
+}
+
+/* =======================================================
+   ▼ フィニッシュコンボボーナス表記
+   ======================================================= */
+function finishComboBonus() {
+  if (comboBonusGiven || currentComboCount < 2) return;
+
+  comboBonusGiven = true;
+
+  const cappedCount = Math.min(currentComboCount, 50); // ✅ 最大50Hits扱い
+  const bonusScore = cappedCount * 1000;
+  const bonusExp = cappedCount * 10;
+  score += bonusScore;
+  addExp(bonusExp);
+
+  const bonusDiv = document.createElement("div");
+  bonusDiv.innerText = `+${bonusScore}\nEXP+${bonusExp}`;
+  bonusDiv.style.position = "absolute";
+  bonusDiv.style.right = "5%";
+  bonusDiv.style.top = "100%";
+  bonusDiv.style.transform = "translateY(0)";
+  bonusDiv.style.fontSize = "20px";
+  bonusDiv.style.fontWeight = "bold";
+  bonusDiv.style.whiteSpace = "pre";
+  bonusDiv.style.color = "aqua";
+  bonusDiv.style.textShadow = "2px 2px 4px black";
+  bonusDiv.style.pointerEvents = "none";
+  bonusDiv.style.zIndex = "100";
+
+  game.appendChild(bonusDiv);
+
+  // 浮き上がり＆フェードアウトアニメーション
+  let offset = 0;
+  let opacity = 1;
+  const floatUp = setInterval(() => {
+    offset += 2;
+    opacity -= 0.03;
+    bonusDiv.style.top = `${100 - offset}px`; // ← 上にずらす
+    bonusDiv.style.opacity = opacity;
+    if (offset > 50 || opacity <= 0) {
+      clearInterval(floatUp);
+      bonusDiv.remove();
+    }
+  }, 30);
+
+  // ✅ コンボ情報リセット
+  currentComboCount = 0;
+  comboBonusGiven = false;
+  comboInProgress = false;
+
+  // ✅ コンボUIを非表示
+  const comboText = document.getElementById("comboText");
+  if (comboText) comboText.style.display = "none";
+
+  // ✅ タイマーを明示的に解除
+  if (comboEndTimeout) {
+    clearTimeout(comboEndTimeout);
+    comboEndTimeout = null;
+  }
+
+  updateUI();
+}
+
+/* =======================================================
+   ▼ UIの更新処理
+   ======================================================= */
+function updateUI() {
+  // ハートの数表示（負のrepeat対策あり）
+  livesEl.innerHTML =
+    "❤️".repeat(Math.max(0, lives)) +
+    "🖤".repeat(Math.max(0, maxLives - lives));
+
+  // レベル表示
+  levelEl.textContent = "Lv. " + level;
+
+  // 経験値表示
+  if (level < maxLevel) {
+    expEl.textContent = `EXP: ${exp} / ${level * 200}`;
+  } else {
+    expEl.textContent = `EXP: MAX`;
+  }
+
+  // スコア表示
+  scoreEl.textContent = "スコア: " + score;
+}
+
+/* =======================================================
+   ▼ 経験値追加
+   ======================================================= */
+function addExp(amount) {
+  if (level >= maxLevel) return;
+
+  exp += amount;
+  let threshold = level * 200;
+
+  let levelUps = 0;
+
+  while (exp >= threshold && level < maxLevel) {
+    exp -= threshold;
+    level++;
+    maxLives++;
+    levelUps++;
+    playerSpeed *= 1.05;
+    threshold = level * 200;
+  }
+
+  // ライフ回復は最後に1回だけまとめて処理
+  if (levelUps > 0) {
+    lives = Math.min(lives + levelUps, maxLives);
+  }
+
+  updateUI();
+}
+
 /* =======================================================
    ▼ 障害物ダメージ表現
    ======================================================= */
@@ -1900,9 +2190,12 @@ function reflectObstacle(obstacle, isRainbow) {
   let y = parseInt(obstacle.style.top);
   let vy = -obstacleSpeed * (isRainbow ? 1.5 : 1);
 
-  if (isRainbow) obstacle.classList.add("rainbow");
+  if (isRainbow) {
+    obstacle.classList.add("rainbow");
+    comboReflectedCount++; // 🌈 コンボ反射弾カウント開始
+  }
 
-  // 一時的に当たり判定サイズを拡大（500ms限定）
+  // 当たり判定拡大
   const originalW = parseFloat(obstacle.dataset.hitboxW);
   const originalH = parseFloat(obstacle.dataset.hitboxH);
   const expandedW = originalW * 1.2;
@@ -1917,13 +2210,29 @@ function reflectObstacle(obstacle, isRainbow) {
     }
   }, 500);
 
+  // ✅ 二重削除防止用フラグ
+  let removed = false;
+
+  // 🔥 2秒後に強制消滅処理
+  setTimeout(() => {
+    if (!removed && obstacle && obstacle.parentElement) {
+      if (obstacle.classList.contains("rainbow")) {
+        comboReflectedCount--;
+        if (comboReflectedCount <= 0) {
+          comboLastUpdateTime = Date.now();
+          comboInProgress = true;
+        }
+      }
+      obstacle.remove();
+      removed = true;
+    }
+  }, 2000);
+
   const move = setInterval(() => {
     if (!obstacle.parentElement) return clearInterval(move);
-
     y += vy;
     obstacle.style.top = y + "px";
 
-    // ★ 処理負荷軽減（1フレームごとに判定せず、1/2頻度に）
     if (!obstacle.frameCount) obstacle.frameCount = 0;
     obstacle.frameCount++;
     if (obstacle.frameCount % 2 !== 0) return;
@@ -1951,49 +2260,58 @@ function reflectObstacle(obstacle, isRainbow) {
 
       let scoreAdd = 0;
       let expAdd = 0;
-
-      // ✅ ステージごとのスコア／経験値設定（img不要）
+      // ✅ 障害物のスコアと経験値
       if (stageType === 1 || stageType === 2) {
-        scoreAdd = hp2 === 2 ? 1500 : 1000;
-        expAdd = hp2 === 2 ? 15 : 10;
+        scoreAdd = hp2 === 2 ? 1000 : 500;
+        expAdd = hp2 === 2 ? 10 : 5;
       } else if (stageType === 3) {
-        scoreAdd = hp2 === 3 ? 2500 : 1500;
-        expAdd = hp2 === 3 ? 25 : 15;
+        scoreAdd = hp2 === 3 ? 1500 : 1000;
+        expAdd = hp2 === 3 ? 15 : 10;
       } else if (stageType === 4) {
         if (hp2 === 3 && size === "huge" && color === "blue") {
-          scoreAdd = 8000;
-          expAdd = 80;
+          scoreAdd = 6000;
+          expAdd = 60;
+        } else if (hp2 === 3) {
+          scoreAdd = 4000;
+          expAdd = 40;
+        } else if (hp2 === 1) {
+          scoreAdd = 1500;
+          expAdd = 15;
+        }
+      } else if (stageType >= 5) {
+        if (hp2 === 3 && size === "huge" && color === "blue") {
+          scoreAdd = 7000;
+          expAdd = 70;
         } else if (hp2 === 3) {
           scoreAdd = 5000;
           expAdd = 50;
+        } else if (hp2 === 2) {
+          scoreAdd = 3000;
+          expAdd = 30;
         } else if (hp2 === 1) {
           scoreAdd = 2000;
           expAdd = 20;
         }
-      } else if (stageType >= 5) {
-        if (hp2 === 3 && size === "huge" && color === "blue") {
-          scoreAdd = 9000;
-          expAdd = 90;
-        } else if (hp2 === 3) {
-          scoreAdd = 6000;
-          expAdd = 60;
-        } else if (hp2 === 2) {
-          scoreAdd = 4000;
-          expAdd = 40;
-        } else if (hp2 === 1) {
-          scoreAdd = 3000;
-          expAdd = 30;
-        }
       }
 
       if (isRainbow) {
-        // ジャストパリィ：スコア2倍
         score += scoreAdd * 2;
         addExp(expAdd);
         safeCreateExplosion(otherX, otherY, scoreAdd * 2, true, false, expAdd);
         other.remove();
+
+        if (!comboInProgress && currentComboCount === 0) {
+          currentComboCount = 2;
+          comboBonusGiven = false; // ✅ 最初のヒット時に必ずリセット
+        } else {
+          currentComboCount++;
+        }
+
+        updateComboDisplay(currentComboCount);
+        comboLastUpdateTime = Date.now();
+        comboInProgress = true;
+
       } else {
-        // 通常パリィ
         if (hp1 === hp2) {
           score += scoreAdd;
           addExp(expAdd);
@@ -2001,6 +2319,7 @@ function reflectObstacle(obstacle, isRainbow) {
           obstacle.remove();
           other.remove();
           clearInterval(move);
+          removed = true;
         } else if (hp1 > hp2) {
           score += scoreAdd;
           addExp(expAdd);
@@ -2015,14 +2334,23 @@ function reflectObstacle(obstacle, isRainbow) {
           }, 150);
           obstacle.remove();
           clearInterval(move);
+          removed = true;
         }
       }
 
       updateUI();
     }
 
-    if (y < 0) {
+    if (y < 0 && !removed) {
+      if (obstacle.classList.contains("rainbow")) {
+        comboReflectedCount--;
+        if (comboReflectedCount <= 0) {
+          comboLastUpdateTime = Date.now();
+          comboInProgress = true;
+        }
+      }
       obstacle.remove();
+      removed = true;
       clearInterval(move);
     }
   }, 30);
@@ -2063,25 +2391,33 @@ function endGame() {
 
   clearInterval(obstacleTimerId);
 
+  // ▼▼▼ アイテム落下タイマーをすべて停止 ▼▼▼
+  if (typeof itemFallTimers !== "undefined") {
+    itemFallTimers.forEach(id => clearInterval(id));
+    itemFallTimers = [];
+  }
+
+  // ▼▼▼ アイテムをすべて削除（.heal クラスを共通指定） ▼▼▼
+  document.querySelectorAll(".heal").forEach(item => item.remove());
+
   // ゲームオーバー処理
   if (score < 150000) {
     const gameOverText = document.createElement("h2");
-    gameOverText.id = "gameOverText";   
+    gameOverText.id = "gameOverText";
     gameOverText.textContent = "Game Over!";
     gameOverText.style.color = "yellow";
     gameOverText.style.marginTop = "200px";
     game.appendChild(gameOverText);
-    
+
     gameClear.style.display = "none";
     restartButton.style.display = "block";
-    restartButton.style.pointerEvents = "auto"; 
-    
+    restartButton.style.pointerEvents = "auto";
+
     pauseButton.style.display = "none";
   } else {
-    // ▼▼▼【ここに障害物削除処理を追加】▼▼▼
+    // ▼▼▼ 障害物削除処理 ▼▼▼
     allObstacles.forEach(obj => obj.remove());
     allObstacles.length = 0;
-    
 
     // ゲームクリア処理
     const clearTime = (gameTime / 1000).toFixed(3);
@@ -2093,45 +2429,48 @@ function endGame() {
     console.log("RANK:", rating);
 
     timeRatingEl.textContent = `RANK: ${rating}`;
-    
-    // ✅ ▼▼▼ ここに Vランク演出を追加 ▼▼▼
+
+    // ✅ ▼▼▼ Vランク演出 ▼▼▼
     if (rating.trim().toUpperCase() === "V") {
-      // ランク表示に特別な装飾を付加
       timeRatingEl.classList.add("void-rank");
-      
-      // サブテキスト「V - VOID RANK」追加
+
+      const existingSubtext = timeRatingEl.parentElement.querySelector(".void-subtext");
+      if (existingSubtext) existingSubtext.remove();
+
       const subtext = document.createElement("div");
       subtext.textContent = "V - VOID RANK";
       subtext.className = "void-subtext";
       timeRatingEl.parentElement.appendChild(subtext);
-      
-      // 羽根演出を起動
+
       triggerVoidFeathers();
     }
-    // ✅ ▲▲▲ ここまで ▲▲▲
+    // ✅ ▲▲▲ Vランクここまで ▲▲▲
+
     showMusicTitle("♪Twilight Flutter");
-    
+
     gameClear.style.display = "flex";
     restartButton.style.display = "block";
     document.getElementById("thankYouText").style.display = "block";
-    
+
     // ✅ 表示用ランキングを更新
     displayHighScores();
-    
+
     // ✅ UI表示が終わってからハイスコアチェックを呼ぶ
     setTimeout(() => {
       checkAndRegisterHighScore(score, rating);
-    }, 500); // 表示完了後、0.5秒で呼び出す
+    }, 500);
   }
-    // ✅ クリアBGM再生
-    bgm.Result.currentTime = 0;
-    bgm.Result.volume = 0.8;
-    bgm.Result.play();
-    
-    pauseButton.style.display = "none"; 
-  
+
+  // ✅ クリアBGM再生
+  bgm.Result.currentTime = 0;
+  bgm.Result.volume = 0.8;
+  bgm.Result.play();
+
+  pauseButton.style.display = "none";
+
   updateUI();
 }
+
 
 setInterval(() => {
   if (gameStarted && !gameOver) {
@@ -2199,131 +2538,6 @@ function triggerVoidFeathers() {
 }
 
 /* =======================================================
-   ▼ アイテム生成
-   ======================================================= */
-function spawnFallingItem(type) {
-  const config = {
-    heart: {
-      emoji: "💗",
-      speed: 5,
-      condition: () => lives < maxLives && Math.random() < 0.10,
-      onCollect: () => {
-        lives = Math.min(lives + 1, maxLives);
-        updateUI();
-      }
-    },
-    goldHeart: {
-      emoji: "💛",
-      speed: 8,
-      condition: () => lives <= 1 && Math.random() < 0.05,
-      onCollect: () => {
-        lives = maxLives;
-        updateUI();
-      }
-    },
-    lemon: {
-      emoji: "🍋",
-      speed: 5,
-      condition: () => level < maxLevel && lives === maxLives && Math.random() < 0.05,
-      onCollect: (x, y) => {
-        const scoreAdd = 10000, expAdd = 300;
-        createExplosion(x, y, scoreAdd, false, true, expAdd);
-        score += scoreAdd;
-        addExp(expAdd);
-        updateUI();
-      }
-    },
-    grape: {
-      emoji: "🍇",
-      speed: 5,
-      condition: () => level >= maxLevel && Math.random() < 0.05,
-      onCollect: (x, y) => {
-        createExplosion(x, y, 15000, false, true);
-        score += 15000;
-        updateUI();
-        setSuperInvincible(15000);
-      }
-    }
-  };
-
-  const itemData = config[type];
-  if (!itemData || !itemData.condition() || gameOver || isPaused) return;
-
-  const el = document.createElement("div");
-  el.classList.add("heal");
-  el.textContent = itemData.emoji;
-  el.style.left = Math.floor(Math.random() * 9) * 40 + "px";
-  el.style.top = "0px";
-  game.appendChild(el);
-
-  let y = 0;
-  const fall = setInterval(() => {
-    if (gameOver || !el.parentElement) return clearInterval(fall);
-    if (isPaused) return;
-
-    y += itemData.speed;
-    el.style.top = y + "px";
-
-    const itemRect = el.getBoundingClientRect();
-    const playerRect = hitbox.getBoundingClientRect();
-    const gameRect = game.getBoundingClientRect();
-    const centerX = itemRect.left + itemRect.width / 2 - gameRect.left;
-    const centerY = itemRect.top + itemRect.height / 2 - gameRect.top;
-
-    if (checkCollision(itemRect, playerRect)) {
-      el.remove();
-      clearInterval(fall);
-      if (seItem) {
-        seItem.currentTime = 0;
-        seItem.play().catch(e => console.warn("SE error:", e));
-      }
-      itemData.onCollect?.(centerX, centerY);
-      return;
-    }
-
-    for (let obs of allObstacles) {
-      if (obs.dataset.type === "reflected") {
-        const obsRect = obs.getBoundingClientRect();
-        if (checkCollision(itemRect, obsRect)) {
-          el.remove();
-          clearInterval(fall);
-          createExplosion(centerX, centerY);
-          return;
-        }
-      }
-    }
-
-    if (y > 600) {
-      el.remove();
-      clearInterval(fall);
-    }
-  }, 30);
-}
-
-/* =======================================================
-   ▼ ハート/レモン/グレープ生成の元コード置き換え
-   ======================================================= */
-function maybeSpawnHeart() {
-  spawnFallingItem("goldHeart");
-  spawnFallingItem("heart");
-}
-function maybeSpawnLemon() {
-  spawnFallingItem("lemon");
-}
-function maybeSpawnGrape() {
-  spawnFallingItem("grape");
-}
-/* =======================================================
-   ▼ アイテム取得SE
-   ======================================================= */
-function loadAudio(audioEl) {
-  return new Promise((resolve, reject) => {
-    audioEl.oncanplaythrough = resolve;
-    audioEl.onerror = reject;
-    audioEl.load();
-  });
-}
-/* =======================================================
    ▼ ハイスコア名前入力
    ======================================================= */
 function checkAndRegisterHighScore(score, rating) {
@@ -2373,7 +2587,11 @@ function checkAndRegisterHighScore(score, rating) {
 
     enteringName = true;
     namePos = 0;
-    nameChars = ["A", "A", "A", "A"];
+    // ✅ 前回の名前を初期値に反映（localStorage）
+    const lastName = localStorage.getItem("lastEnteredName") || "AAAA";
+    nameChars = lastName.split("").slice(0, 4);
+    while (nameChars.length < 4) nameChars.push("A");
+  
     updateNameEntryDisplay();
 
     const entryScreen = document.getElementById("nameEntryScreen");
@@ -2452,7 +2670,7 @@ window.addEventListener("DOMContentLoaded", () => {
 function getRatingMultiplier(rating) {
   return ratingCoefficients[rating] || 1.0;
 }
-
+  // ✅ 名前決定
 function confirmNameEntry() {
   if (!enteringName) return;
 
@@ -2487,6 +2705,9 @@ function confirmNameEntry() {
 
   // 🎯 入力直後に即反映！
   displayHighScores();
+  
+    // ✅ 入力した名前を保存
+  localStorage.setItem("lastEnteredName", name);
 
   // 念のため newHighScore をリセット
   window.newHighScore = null;
