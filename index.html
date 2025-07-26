@@ -211,11 +211,11 @@
       display: none;
       justify-content: center;
       align-items: flex-start;
-      padding-top: 100px;
+      padding-top: 80px;
       text-align: center;
       color: yellow;
       background: rgba(0, 0, 0, 0.7);
-      font-size: 22px;
+      font-size: 20px;
       z-index: 20;
       pointer-events: none; 
     }
@@ -521,7 +521,7 @@
   <img src="title_mothvoid.webp" alt="MOTHVOIDタイトルロゴ" id="titleLogo">
   <p id="pressToStart">PRESS ANY BUTTON</p>
   <p id="smartphoneHint" class="title-only">
-  Ver.1.2.2<br>
+  Ver.1.2.3<br>
   ※スマホの場合<br>
   「共有ボタン→ホーム画面に追加」<br>
   その後ホーム画面のショートカットから<br>
@@ -1146,7 +1146,7 @@ function createObstacle() {
   let colorClass = "";
   let fallSpeed;
 
-  // speedScaleをscoreに基づいて計算
+  // speedScaleの計算
   let speedScale = 1.0;
   if (score >= 150000) {
     const additionalScale = Math.min(Math.floor(score / 150000) * 1.2, 7.0);
@@ -1154,64 +1154,47 @@ function createObstacle() {
   }
   speedScale = Math.min(speedScale, 8.0);
 
-  // ステージ別出現内容
-if (stage === 1) {
-  sizeOption = Math.random() < 0.6 ? "small" : "big";
-  colorClass = "red";
-  fallSpeed = sizeOption === "small" ? 4 * speedScale : 3 * speedScale;
-} else if (stage === 2) {
-  sizeOption = Math.random() < 0.7 ? "small" : "big";
-  colorClass = "blue";
-  fallSpeed = sizeOption === "small" ? 4 * speedScale : 5 * speedScale;
-} else if (stage === 3) {
-  sizeOption = Math.random() < 0.8 ? "big" : "huge";
-  colorClass = "green";
-  fallSpeed = sizeOption === "big" ? 5 * speedScale : 2 * speedScale;
-} else if (stage === 4 || stage === 5) { // ✅ ステージ4と5を統合
-  const randomChoice = Math.random();
-  if (randomChoice < 0.3) {
-    sizeOption = "huge";
+  // ステージ別内容
+  if (stage === 1) {
+    sizeOption = Math.random() < 0.6 ? "small" : "big";
     colorClass = "red";
-    fallSpeed = 3 * speedScale;
-  } else if (randomChoice < 0.4) {
-    sizeOption = "huge";
+    fallSpeed = sizeOption === "small" ? 4 * speedScale : 3 * speedScale;
+  } else if (stage === 2) {
+    sizeOption = Math.random() < 0.7 ? "small" : "big";
     colorClass = "blue";
-    fallSpeed = 2 * speedScale;
-  } else {
-    sizeOption = "small";
+    fallSpeed = sizeOption === "small" ? 4 * speedScale : 5 * speedScale;
+  } else if (stage === 3) {
+    sizeOption = Math.random() < 0.8 ? "big" : "huge";
     colorClass = "green";
-    fallSpeed = 6 * speedScale;
+    fallSpeed = sizeOption === "big" ? 5 * speedScale : 2 * speedScale;
+  } else if (stage === 4 || stage === 5) {
+    const randomChoice = Math.random();
+    if (randomChoice < 0.3) {
+      sizeOption = "huge";
+      colorClass = "red";
+      fallSpeed = 3 * speedScale;
+    } else if (randomChoice < 0.4) {
+      sizeOption = "huge";
+      colorClass = "blue";
+      fallSpeed = 2 * speedScale;
+    } else {
+      sizeOption = "small";
+      colorClass = "green";
+      fallSpeed = 6 * speedScale;
+    }
+    item.classList.add("stage4");
   }
-  item.classList.add("stage4"); // ✅ 必要に応じて "stage5" に変更可（演出が違う場合）
-}
 
-
-  // ▼ GIF画像の表示
-  const img = document.createElement("img");
+  // ▼ GIF画像を背景に設定（img要素なし）
   const sizeStr = sizeOption;
   const colorInitial = colorClass[0].toUpperCase();
-  img.src = `enm_${sizeStr}_${colorInitial}.gif`;
-  img.className = "obstacle-img";
+  item.style.backgroundImage = `url(enm_${sizeStr}_${colorInitial}.gif)`;
+  item.style.backgroundSize = "cover";
+  item.style.backgroundRepeat = "no-repeat";
+  item.style.backgroundPosition = "center";
+  item.style.pointerEvents = "none";
 
-  if (sizeOption === "small") {
-    img.style.width = "60px";
-    img.style.height = "60px";
-  } else if (sizeOption === "big") {
-    img.style.width = "100px";
-    img.style.height = "100px";
-  } else {
-    img.style.width = "180px";
-    img.style.height = "180px";
-  }
-
-  img.style.position = "absolute";
-  img.style.left = "50%";
-  img.style.top = "50%";
-  img.style.transform = "translate(-50%, -50%)";
-  img.style.pointerEvents = "none";
-  item.appendChild(img);
-
-  // 表示サイズ（ヒットボックスも定義）
+  // 表示サイズ・ヒットボックス設定
   if (sizeOption === "small") {
     item.style.width = "60px";
     item.style.height = "60px";
@@ -1229,21 +1212,18 @@ if (stage === 1) {
     item.dataset.hitboxH = 172;
   }
 
-  item.style.background = "none";
   item.style.backgroundColor = "transparent";
-
-  // コリジョン情報
-  const hp = sizeOption === "small" ? 1 : sizeOption === "big" ? 2 : 3;
-  item.dataset.hp = hp;
+  item.dataset.hp = sizeOption === "small" ? 1 : sizeOption === "big" ? 2 : 3;
   item.dataset.type = "damage";
   item.dataset.stage = stage;
-
+  item.dataset.size = sizeOption;
+  item.dataset.color = colorClass;
   item.classList.add("obstacle");
-//item.classList.add("debug");
 
-  // 表示位置（40pxグリッド）
+  // 位置設定（40pxグリッド）
   item.style.left = Math.floor(Math.random() * 9) * 40 + "px";
   item.style.top = "0px";
+  item.style.position = "absolute";
 
   game.appendChild(item);
   allObstacles.push(item);
@@ -1251,15 +1231,12 @@ if (stage === 1) {
   let y = 0;
   const fall = setInterval(() => {
     if (gameOver || !item.parentElement) return clearInterval(fall);
-    if (isPaused) return;  
+    if (isPaused) return;
     y += fallSpeed;
     item.style.top = y + "px";
 
     const playerRect = hitbox.getBoundingClientRect();
-    const itemRect = getAdjustedRect(item); 
-    // 仮表示（デバッグ確認用）
-  //drawCollisionBox(itemRect, "rgba(0, 255, 0, 0.3)");
-  //drawCollisionBox(playerRect, "rgba(0, 0, 255, 0.3)");
+    const itemRect = getAdjustedRect(item);
 
     // パリィ判定
     if (parryActive && item.dataset.type === "damage") {
@@ -1276,7 +1253,7 @@ if (stage === 1) {
 
     // 通常ヒット
     if (checkCollision(playerRect, itemRect)) {
-      if (!invincible && !superInvincible) {  // ✅ ← 両方無敵でない場合のみダメージ
+      if (!invincible && !superInvincible) {
         const dmg = parseInt(item.dataset.hp);
         lives -= dmg;
         if (lives <= 0) endGame();
@@ -1287,7 +1264,8 @@ if (stage === 1) {
       clearInterval(fall);
       return;
     }
-    // 画面外へでない
+
+    // 画面外
     if (y > 600) {
       item.remove();
       clearInterval(fall);
@@ -1350,45 +1328,50 @@ function updateStage() {
 /* =======================================================
    ▼ プレイヤー行動処理
    ======================================================= */
-// 回避移動関数
+// 共通ヘルパー
+function isLeftKey(key) {
+  return key === "ArrowLeft" || key === "a" || key === "A";
+}
+function isRightKey(key) {
+  return key === "ArrowRight" || key === "d" || key === "D";
+}
+
+// 回避移動
 function dodge(dir) {
   if (isDodging) return;
   isDodging = true;
   speedBoost = true;
-    // 🔊 回避SEを再生
-  if (seDodge) {
-    seDodge.currentTime = 0;
-    seDodge.play();
-  }
-  setInvincible(300);  // 無敵時間
+  if (seDodge) { seDodge.currentTime = 0; seDodge.play(); }
+  setInvincible(300);
   player.classList.add("dodging");
 
-  // 🔵 青い光をプレイヤーに追加
   const flare = document.createElement("div");
   flare.className = "dodge-flare";
   player.appendChild(flare);
 
   const startX = playerX;
-  spawnAfterImage(startX); // 1ステップ目の前
+  spawnAfterImage(startX);
 
   for (let i = 0; i < 2; i++) {
     const delta = dir === "ArrowLeft" ? -STEP_PX : STEP_PX;
-    playerX = Math.max(0, Math.min(360, playerX + delta));
-    player.style.left = playerX + "px";
-    hitbox.style.left = (playerX + 4) + "px";
-
-    if (i === 0) spawnAfterImage(playerX); // 1ステップ後の残像
+    const newX = Math.max(0, Math.min(360, playerX + delta));
+    if (newX !== playerX) {
+      playerX = newX;
+      player.style.left = playerX + "px";
+      hitbox.style.left = (playerX + 4) + "px";
+    }
+    if (i === 0) spawnAfterImage(playerX);
   }
 
   setTimeout(() => {
     speedBoost = false;
     isDodging = false;
     player.classList.remove("dodging");
-    flare.remove(); // 🔵 青い光を除去
+    flare.remove();
   }, 300);
 }
 
-/* 残像生成 0.1 s */
+// 残像
 function spawnAfterImage(xPos){
   const img = document.createElement("div");
   img.className = "afterimage";
@@ -1399,90 +1382,79 @@ function spawnAfterImage(xPos){
   game.appendChild(img);
   setTimeout(() => img.remove(), 100);
 }
-/* ★★★★★★★★★★  入力ハンドラここから  ★★★★★★★★★★
-   ──────────────────────────────────
-   - ⌨  ← → / A・D：押しっぱで通常移動、0.2s 以内の 2 回押しで dodge()
-   - 🖱  クリック  ：parry
-   - 🤚 タッチ     ：左・右・パリィ
-   ────────────────────────────────── */
-// ────────────── 共通移動処理 ──────────────
-// スマホでの長押しメニュー（画像保存など）を無効化
-document.addEventListener("contextmenu", e => e.preventDefault());
-let isTouchHolding = false;
-let touchHoldInterval = null;
 
+// 通常移動
 function stepMove(dir){
   if (gameOver || isPaused) return;
   const delta = speedBoost ? playerSpeed * 2 : playerSpeed;
+  const prevX = playerX;
 
-  if (dir === "ArrowLeft")  playerX = Math.max(0,   playerX - delta);
+  if (dir === "ArrowLeft")  playerX = Math.max(0, playerX - delta);
   if (dir === "ArrowRight") playerX = Math.min(360, playerX + delta);
 
-  player.style.left = playerX + "px";
-  hitbox.style.left = (playerX + 4) + "px";
-}
-// ────────────── ダブルタップ判定 ──────────────
-function handleTap(dirKey){
-  const now = performance.now();
-  if (isTouchHolding) return; // 押しっぱ中はダブルタップ無視
-
-  if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS){
-    dodge(dirKey);
-    lastKey = "";
-  } else {
-    lastKey = dirKey;
-    lastKeyTime = now;
-    stepMove(dirKey);
+  if (playerX !== prevX) {
+    player.style.left = playerX + "px";
+    hitbox.style.left = (playerX + 4) + "px";
   }
 }
 
-// ────────────── PCキーボード操作 ──────────────
+// PCキーボード操作
 document.addEventListener("keydown", e => {
-  if (gameOver) return;
+  if (gameOver || isPaused) return;
 
   const key = e.key;
-
-  // 🔶 パリィ：FキーまたはEnterキーで発動
   if (key === "f" || key === "F" || key === "Enter") {
     activateParry();
-    return; // パリィ発動後は他の処理をしない
+    return;
   }
 
-  // ⬅️➡️ 左右キー処理（移動／回避）
-  const isLeft  = key === "ArrowLeft"  || key === "a" || key === "A";
-  const isRight = key === "ArrowRight" || key === "d" || key === "D";
-
+  const isLeft  = isLeftKey(key);
+  const isRight = isRightKey(key);
   if (!isLeft && !isRight) return;
 
   const dirKey = isLeft ? "ArrowLeft" : "ArrowRight";
-  keyPressed[dirKey] = true;
 
-  if (e.repeat) {
-    stepMove(dirKey);
-  } else {
-    handleTap(dirKey);
+  // 長押しでは dodge 発動しない
+  if (!e.repeat) {
+    const now = performance.now();
+    if (lastKey === dirKey && now - lastKeyTime <= DOUBLE_TAP_MS) {
+      dodge(dirKey);
+      lastKey = "";
+    } else {
+      lastKey = dirKey;
+      lastKeyTime = now;
+    }
   }
+
+  keyPressed[dirKey] = true;
 });
+
 document.addEventListener("keyup", e => {
   const key = e.key;
-  if (key === "ArrowLeft"  || key === "a" || key === "A") keyPressed["ArrowLeft"]  = false;
-  if (key === "ArrowRight" || key === "d" || key === "D") keyPressed["ArrowRight"] = false;
+  if (isLeftKey(key))  keyPressed["ArrowLeft"] = false;
+  if (isRightKey(key)) keyPressed["ArrowRight"] = false;
 });
 
-// ────────────── PCクリック → パリィ ──────────────
+// 通常移動ループ
+function continuousMoveLoop() {
+  if (!isPaused && !gameOver) {
+    if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
+    if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
+  }
+  requestAnimationFrame(continuousMoveLoop);
+}
+continuousMoveLoop();
+
+// クリック／タップでパリィ
 game.addEventListener("mousedown", () => {
-  if (gameOver) return;
-  activateParry();
+  if (!gameOver) activateParry();
 });
-
-// ────────────── スマホタッチパリィ ──────────────
 game.addEventListener("touchstart", e => {
   e.preventDefault();
-  if (gameOver) return;
-  activateParry();
+  if (!gameOver) activateParry();
 });
 
-// ────────────── スマホ：押しっぱ＆タップ対応 ──────────────
+// タッチ長押し（スマホ）
 function startTouchHold(dirKey) {
   isTouchHolding = true;
   stopTouchHold();
@@ -1491,65 +1463,47 @@ function startTouchHold(dirKey) {
     stepMove(dirKey);
   }, 30);
 }
-
 function stopTouchHold() {
   clearInterval(touchHoldInterval);
-  touchHoldInterval = null;
   isTouchHolding = false;
   keyPressed["ArrowLeft"] = false;
   keyPressed["ArrowRight"] = false;
 }
 
-// 左ボタン
+// タッチボタン
 btnLeft.addEventListener("touchstart", e => {
-  e.preventDefault();
-  startTouchHold("ArrowLeft");
+  e.preventDefault(); startTouchHold("ArrowLeft");
 });
 btnLeft.addEventListener("touchend", e => {
-  e.preventDefault();
-  stopTouchHold();
-  handleTap("ArrowLeft");
+  e.preventDefault(); stopTouchHold();
 });
 btnLeft.addEventListener("touchcancel", stopTouchHold);
 
-// 右ボタン
 btnRight.addEventListener("touchstart", e => {
-  e.preventDefault();
-  startTouchHold("ArrowRight");
+  e.preventDefault(); startTouchHold("ArrowRight");
 });
 btnRight.addEventListener("touchend", e => {
-  e.preventDefault();
-  stopTouchHold();
-  handleTap("ArrowRight");
+  e.preventDefault(); stopTouchHold();
 });
 btnRight.addEventListener("touchcancel", stopTouchHold);
 
-// スマホパリィボタン（タップ対応）
 btnParry.addEventListener("touchstart", e => {
-  e.preventDefault();
-  activateParry();
+  e.preventDefault(); activateParry();
 });
-// 🔽 ポーズボタンでゲーム一時停止
+
+// ポーズ制御
 pauseButton.addEventListener("click", () => {
   isPaused = true;
   pauseOverlay.style.display = "flex";
   pauseButton.style.display = "none";
   resumeButton.style.display = "inline";
 });
-
-// 🔽 再開ボタンでゲーム再開
 resumeButton.addEventListener("click", () => {
   isPaused = false;
   pauseOverlay.style.display = "none";
   pauseButton.style.display = "inline";
   resumeButton.style.display = "none";
 });
-// ────────────── 押しっぱ移動ループ（スマホ/PC共通）──────────────
-setInterval(() => {
-  if (isPaused) return;
-  if (keyPressed["ArrowLeft"])  stepMove("ArrowLeft");
-  if (keyPressed["ArrowRight"]) stepMove("ArrowRight");
-}, 30);
 
 /* ★★★★★★★★★★  入力ハンドラここまで  ★★★★★★★★★★ */
 
@@ -1887,14 +1841,13 @@ function reflectObstacle(obstacle, isRainbow) {
   obstacle.dataset.hp = hp;
 
   let y = parseInt(obstacle.style.top);
-  let x = parseInt(obstacle.style.left);
   let vy = -obstacleSpeed * (isRainbow ? 1.5 : 1);
 
   if (isRainbow) obstacle.classList.add("rainbow");
 
-  // 拡大ヒットサイズをセット（500ms限定）
-  const originalW = obstacle.offsetWidth;
-  const originalH = obstacle.offsetHeight;
+  // 一時的に当たり判定サイズを拡大（500ms限定）
+  const originalW = parseFloat(obstacle.dataset.hitboxW);
+  const originalH = parseFloat(obstacle.dataset.hitboxH);
   const expandedW = originalW * 1.2;
   const expandedH = originalH * 1.2;
   obstacle.dataset.hitboxW = expandedW;
@@ -1912,8 +1865,8 @@ function reflectObstacle(obstacle, isRainbow) {
 
     y += vy;
     obstacle.style.top = y + "px";
-    
-      // ✅ フレーム数で処理頻度を半分に制御
+
+    // ★ 処理負荷軽減（1フレームごとに判定せず、1/2頻度に）
     if (!obstacle.frameCount) obstacle.frameCount = 0;
     obstacle.frameCount++;
     if (obstacle.frameCount % 2 !== 0) return;
@@ -1931,55 +1884,53 @@ function reflectObstacle(obstacle, isRainbow) {
       const otherW = parseFloat(other.dataset.hitboxW || other.offsetWidth);
       const otherH = parseFloat(other.dataset.hitboxH || other.offsetHeight);
 
-      if (!rectsOverlap(selfX, selfY, selfW, selfH, otherX, otherY, otherW, otherH)) {
-        continue;
-      }
+      if (!rectsOverlap(selfX, selfY, selfW, selfH, otherX, otherY, otherW, otherH)) continue;
 
       const hp1 = parseInt(obstacle.dataset.hp);
       const hp2 = parseInt(other.dataset.hp);
       const stageType = parseInt(other.dataset.stage || 1);
+      const size = other.dataset.size;
+      const color = other.dataset.color;
 
       let scoreAdd = 0;
       let expAdd = 0;
 
-        // 敵の得点と経験値
-if (stageType === 1 || stageType === 2) {
-  scoreAdd = hp2 === 2 ? 1500 : 1000;
-  expAdd = hp2 === 2 ? 15 : 10;
-} else if (stageType === 3) {
-  scoreAdd = hp2 === 3 ? 2500 : 1500;
-  expAdd = hp2 === 3 ? 25 : 15;
-} else if (stageType === 4) {
-  const imgSrc = other.querySelector("img")?.src || "";
-  if (hp2 === 3 && imgSrc.includes("enm_huge_B")) {
-    scoreAdd = 8000;
-    expAdd = 80;
-  } else if (hp2 === 3) {
-    scoreAdd = 5000;
-    expAdd = 50;
-  } else if (hp2 === 1) {
-    scoreAdd = 2000;
-    expAdd = 20;
-  }
-} else if (stageType >= 5) {
-  const imgSrc = other.querySelector("img")?.src || "";
-  if (hp2 === 3 && imgSrc.includes("enm_huge_B")) {
-    scoreAdd = 9000;
-    expAdd = 90;
-  } else if (hp2 === 3) {
-    scoreAdd = 6000;
-    expAdd = 60;
-  } else if (hp2 === 2) {
-    scoreAdd = 4000;
-    expAdd = 40;
-  } else if (hp2 === 1) {
-    scoreAdd = 3000;
-    expAdd = 30;
-  }
-}
+      // ✅ ステージごとのスコア／経験値設定（img不要）
+      if (stageType === 1 || stageType === 2) {
+        scoreAdd = hp2 === 2 ? 1500 : 1000;
+        expAdd = hp2 === 2 ? 15 : 10;
+      } else if (stageType === 3) {
+        scoreAdd = hp2 === 3 ? 2500 : 1500;
+        expAdd = hp2 === 3 ? 25 : 15;
+      } else if (stageType === 4) {
+        if (hp2 === 3 && size === "huge" && color === "blue") {
+          scoreAdd = 8000;
+          expAdd = 80;
+        } else if (hp2 === 3) {
+          scoreAdd = 5000;
+          expAdd = 50;
+        } else if (hp2 === 1) {
+          scoreAdd = 2000;
+          expAdd = 20;
+        }
+      } else if (stageType >= 5) {
+        if (hp2 === 3 && size === "huge" && color === "blue") {
+          scoreAdd = 9000;
+          expAdd = 90;
+        } else if (hp2 === 3) {
+          scoreAdd = 6000;
+          expAdd = 60;
+        } else if (hp2 === 2) {
+          scoreAdd = 4000;
+          expAdd = 40;
+        } else if (hp2 === 1) {
+          scoreAdd = 3000;
+          expAdd = 30;
+        }
+      }
 
       if (isRainbow) {
-        // ジャストパリィ
+        // ジャストパリィ：スコア2倍
         score += scoreAdd * 2;
         addExp(expAdd);
         safeCreateExplosion(otherX, otherY, scoreAdd * 2, true, false, expAdd);
@@ -2004,7 +1955,7 @@ if (stageType === 1 || stageType === 2) {
           other.style.opacity = "0.4";
           setTimeout(() => {
             if (other) other.style.opacity = "1";
-        }, 150);
+          }, 150);
           obstacle.remove();
           clearInterval(move);
         }
@@ -2191,236 +2142,120 @@ function triggerVoidFeathers() {
 }
 
 /* =======================================================
-   ▼ ハート生成
+   ▼ アイテム生成
    ======================================================= */
-function maybeSpawnHeart() {
-  if (gameOver || isPaused) return;
-  // ライフが満タンの場合は何も出現しない
-  if (lives >= maxLives) return;
-
-  let isGold = false;
-
-  // 💛 ゴールドハート出現条件（ライフ1以下かつ5%）
-  if (lives <= 1 && Math.random() < 0.05) {
-    isGold = true;
-  }
-  // 💗 通常ハート出現条件（10%）
-  else if (Math.random() < 0.10) {
-    isGold = false;
-  } else {
-    return; // どちらも条件を満たさなければ出現しない
-  }
-
-  const heart = document.createElement("div");
-  heart.classList.add("heal");
-  heart.textContent = isGold ? "💛" : "💗";
-  heart.style.left = Math.floor(Math.random() * 9) * 40 + "px";
-  heart.style.top = "0px";
-  game.appendChild(heart);
-
-  let heartY = 0;
-  const fallSpeed = isGold ? 8 : 5;
-
-  const heartFall = setInterval(() => {
-    if (heartY > 600) {
-      heart.remove();
-      clearInterval(heartFall);
-      return;
-    }
-
-    heartY += fallSpeed;
-    heart.style.top = heartY + "px";
-
-    const heartRect = heart.getBoundingClientRect();
-    const playerRect = hitbox.getBoundingClientRect();
-
-    // 🎯 プレイヤーが取得した場合
-    if (checkCollision(heartRect, playerRect)) {
-      if (lives < maxLives) {
-        lives = isGold ? maxLives : lives + 1;
-        heart.remove();
-
-        if (seItem) {
-          seItem.currentTime = 0;
-          seItem.play().catch(e => console.warn("アイテムSE再生エラー:", e));
-        }
-
+function spawnFallingItem(type) {
+  const config = {
+    heart: {
+      emoji: "💗",
+      speed: 5,
+      condition: () => lives < maxLives && Math.random() < 0.10,
+      onCollect: () => {
+        lives = Math.min(lives + 1, maxLives);
         updateUI();
-        clearInterval(heartFall);
       }
-      return;
-    }
-
-    // 💥 反射障害物に当たったら破壊（SEなし）
-    for (let obstacle of allObstacles) {
-      const obstacleRect = obstacle.getBoundingClientRect();
-      if (checkCollision(heartRect, obstacleRect) && obstacle.dataset.type === "reflected") {
-        heart.remove();
-        clearInterval(heartFall);
-
-        createExplosion(
-          heartRect.left + heartRect.width / 2 - game.getBoundingClientRect().left,
-          heartRect.top + heartRect.height / 2 - game.getBoundingClientRect().top,
-          0, false, false
-        );
-
-        return;
-      }
-    }
-  }, 30);
-}
-
-/* =======================================================
-   ▼ レモン生成
-   ======================================================= */
-function maybeSpawnLemon() {
-  if (gameOver || isPaused) return;
-  if (level >= maxLevel) return; // ✅ 最大レベルで🍋は出ない
-  if (lives === maxLives && Math.random() < 0.05) {
-    const lemon = document.createElement("div");
-    lemon.classList.add("heal");
-    lemon.textContent = "🍋";
-    lemon.style.left = Math.floor(Math.random() * 9) * 40 + "px";
-    lemon.style.top = "0px";
-    game.appendChild(lemon);
-
-    let lemonY = 0;
-    const lemonFall = setInterval(() => {
-      if (lemonY > 600) {
-        lemon.remove();
-        clearInterval(lemonFall);
-        return;
-      }
-
-      lemonY += 5;
-      lemon.style.top = lemonY + "px";
-
-      const lemonRect = lemon.getBoundingClientRect();
-      const gameRect = game.getBoundingClientRect();
-      const lemonCenterX = lemonRect.left + lemonRect.width / 2 - gameRect.left;
-      const lemonCenterY = lemonRect.top + lemonRect.height / 2 - gameRect.top;
-
-      const playerRect = hitbox.getBoundingClientRect();
-
-      // 🎯 プレイヤーがレモンを取得した場合
-      if (checkCollision(lemonRect, playerRect)) {
-        const lemonScore = 10000;
-        const lemonExp = 300;
-
-        createExplosion(lemonCenterX, lemonCenterY, lemonScore, false, true, lemonExp);
-
-        score += lemonScore;
-        addExp(lemonExp);
-
-        // ✅ ここだけでアイテムSEを鳴らす
-        if (seItem) {
-          seItem.currentTime = 0;
-          seItem.play().catch(e => console.warn("アイテムSE再生エラー:", e));
-        }
-
-        lemon.remove();
+    },
+    goldHeart: {
+      emoji: "💛",
+      speed: 8,
+      condition: () => lives <= 1 && Math.random() < 0.05,
+      onCollect: () => {
+        lives = maxLives;
         updateUI();
-        clearInterval(lemonFall);
-        return;
       }
-
-      // ⚠️ 反射された障害物に当たった場合のみ破壊（SEなし）
-      for (let obstacle of allObstacles) {
-        const obstacleRect = obstacle.getBoundingClientRect();
-        if (checkCollision(lemonRect, obstacleRect) && obstacle.dataset.type === "reflected") {
-          lemon.remove();
-          clearInterval(lemonFall);
-
-          // 🔥 爆発エフェクトとSE（アイテムSEは鳴らさない）
-          createExplosion(lemonCenterX, lemonCenterY);
-          return;
-        }
+    },
+    lemon: {
+      emoji: "🍋",
+      speed: 5,
+      condition: () => level < maxLevel && lives === maxLives && Math.random() < 0.05,
+      onCollect: (x, y) => {
+        const scoreAdd = 10000, expAdd = 300;
+        createExplosion(x, y, scoreAdd, false, true, expAdd);
+        score += scoreAdd;
+        addExp(expAdd);
+        updateUI();
       }
+    },
+    grape: {
+      emoji: "🍇",
+      speed: 5,
+      condition: () => level >= maxLevel && Math.random() < 0.05,
+      onCollect: (x, y) => {
+        createExplosion(x, y, 15000, false, true);
+        score += 15000;
+        updateUI();
+        setSuperInvincible(15000);
+      }
+    }
+  };
 
-      // 通常障害物に当たっても消えない（無視）
-    }, 30);
-  }
-}
+  const itemData = config[type];
+  if (!itemData || !itemData.condition() || gameOver || isPaused) return;
 
-// === 1. アセット読み込み関数 ===
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = resolve;
-    img.onerror = reject;
-    img.src = src;
-  });
-}
+  const el = document.createElement("div");
+  el.classList.add("heal");
+  el.textContent = itemData.emoji;
+  el.style.left = Math.floor(Math.random() * 9) * 40 + "px";
+  el.style.top = "0px";
+  game.appendChild(el);
 
-/* =======================================================
-   ▼ グレープ生成
-   ======================================================= */
-function maybeSpawnGrape() {
-  if (gameOver || isPaused) return;
-  if (level < maxLevel) return;
-  if (Math.random() >= 0.05) return;
-
-  const grape = document.createElement("div");
-  grape.classList.add("heal");
-  grape.textContent = "🍇";
-  grape.style.left = Math.floor(Math.random() * 9) * 40 + "px";
-  grape.style.top = "0px";
-  game.appendChild(grape);
-
-  let grapeY = 0;
-  const grapeFall = setInterval(() => {
-    if (gameOver || !grape.parentElement) return clearInterval(grapeFall);
+  let y = 0;
+  const fall = setInterval(() => {
+    if (gameOver || !el.parentElement) return clearInterval(fall);
     if (isPaused) return;
 
-    grapeY += 5; // やや高速落下
-    grape.style.top = grapeY + "px";
+    y += itemData.speed;
+    el.style.top = y + "px";
 
-    const grapeRect = grape.getBoundingClientRect();
+    const itemRect = el.getBoundingClientRect();
     const playerRect = hitbox.getBoundingClientRect();
     const gameRect = game.getBoundingClientRect();
-    const gx = grapeRect.left + grapeRect.width / 2 - gameRect.left;
-    const gy = grapeRect.top + grapeRect.height / 2 - gameRect.top;
+    const centerX = itemRect.left + itemRect.width / 2 - gameRect.left;
+    const centerY = itemRect.top + itemRect.height / 2 - gameRect.top;
 
-    // 🎯 取得処理
-    if (checkCollision(grapeRect, playerRect)) {
-      grape.remove();
-      clearInterval(grapeFall);
-
-      score += 15000;
-      updateUI();
-
+    if (checkCollision(itemRect, playerRect)) {
+      el.remove();
+      clearInterval(fall);
       if (seItem) {
         seItem.currentTime = 0;
         seItem.play().catch(e => console.warn("SE error:", e));
       }
-
-      createExplosion(gx, gy, 15000, false, true);
-
-      // ✅ 無敵化処理
-      setSuperInvincible(15000);
+      itemData.onCollect?.(centerX, centerY);
       return;
     }
 
-    // 💥 反射障害物に当たると破壊
     for (let obs of allObstacles) {
       if (obs.dataset.type === "reflected") {
-        const oRect = obs.getBoundingClientRect();
-        if (checkCollision(grapeRect, oRect)) {
-          grape.remove();
-          clearInterval(grapeFall);
-          createExplosion(gx, gy);
+        const obsRect = obs.getBoundingClientRect();
+        if (checkCollision(itemRect, obsRect)) {
+          el.remove();
+          clearInterval(fall);
+          createExplosion(centerX, centerY);
           return;
         }
       }
     }
 
-    if (grapeY > 600) {
-      grape.remove();
-      clearInterval(grapeFall);
+    if (y > 600) {
+      el.remove();
+      clearInterval(fall);
     }
   }, 30);
 }
 
+/* =======================================================
+   ▼ ハート/レモン/グレープ生成の元コード置き換え
+   ======================================================= */
+function maybeSpawnHeart() {
+  spawnFallingItem("goldHeart");
+  spawnFallingItem("heart");
+}
+function maybeSpawnLemon() {
+  spawnFallingItem("lemon");
+}
+function maybeSpawnGrape() {
+  spawnFallingItem("grape");
+}
 /* =======================================================
    ▼ アイテム取得SE
    ======================================================= */
