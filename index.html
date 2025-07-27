@@ -494,7 +494,7 @@
   <div id="score">スコア: 0</div>
   <div id="musicTitle" style="
   position: absolute;
-  top: 500px;
+  top: 530px;
   left: 50%;
   transform: translateX(-50%);
   color: white;
@@ -764,13 +764,17 @@
 /* =======================================================
    ▼ ゲーム開始／再スタート処理（BGMフェードイン対応）
    ======================================================= */
-
-// BGM フェードイン再生関数（volume 0 → 1）
 function fadeInBGM(audio, duration = 1000) {
   const target = parseFloat(audio.dataset.targetVolume || 1);
   audio.volume = 0;
   audio.currentTime = 0;
-  audio.play().catch(console.warn);
+
+  // ✅ ここですぐ currentBGM を確定する
+  currentBGM = audio;
+
+  audio.play().catch(e => {
+    console.warn("🔇 BGM fade-in failed:", e);
+  });
 
   const step = target / (duration / 50);
   let n = 0;
@@ -779,7 +783,6 @@ function fadeInBGM(audio, duration = 1000) {
     audio.volume = Math.min(target, audio.volume + step);
     if (audio.volume >= target || n >= (duration / 50)) {
       clearInterval(id);
-      currentBGM = audio;  // ← ここでようやく currentBGM を確定
     }
   }, 50);
 }
@@ -791,31 +794,37 @@ function crossfadeBGM(fromAudio, toAudio, duration = 1500) {
   if (!fromAudio || !toAudio || fromAudio === toAudio) return;
 
   const fromTarget = 0;
-  const toTarget   = parseFloat(toAudio.dataset.targetVolume || 1);  // ★ 追加
+  const toTarget = parseFloat(toAudio.dataset.targetVolume || 1);
 
   const stepTime = 50;
-  const steps    = duration / stepTime;
+  const steps = duration / stepTime;
   const fromStep = (fromAudio.volume - fromTarget) / steps;
-  const toStep   =  toTarget               / steps;
+  const toStep = toTarget / steps;
 
   toAudio.volume = 0;
   toAudio.currentTime = 0;
-  toAudio.play().catch(console.warn);
+
+  // ✅ 即時に currentBGM を更新（resumeGame に対応させるため）
+  currentBGM = toAudio;
+
+  toAudio.play().catch(e => {
+    console.warn("🔇 crossfadeBGM: play failed", e);
+  });
 
   let n = 0;
   const id = setInterval(() => {
     n++;
     fromAudio.volume = Math.max(fromTarget, fromAudio.volume - fromStep);
-    toAudio.volume   = Math.min(toTarget , toAudio.volume   + toStep );
+    toAudio.volume = Math.min(toTarget, toAudio.volume + toStep);
 
     if (n >= steps) {
       clearInterval(id);
       fromAudio.pause();
       fromAudio.volume = parseFloat(fromAudio.dataset.targetVolume || 1);
-      currentBGM = toAudio;
     }
   }, stepTime);
 }
+
 /* =======================================================
    ▼ 曲名表示
    ======================================================= */
@@ -908,36 +917,38 @@ function updateBackgroundInstant(stageNum) {
 function checkStage() {
   const prev = stage;
 
-  // 通常ステージ（1〜4）を段階的に判定
+  // 通常ステージ（1〜5）を段階的に判定
   stage =
     score >= 600000 ? 5 :
     score >= 150000 ? 4 :
     score >= 100000 ? 3 :
     score >=  50000 ? 2 : 1;
 
-  /* ─ ステージが変わったら ─ */
-  if (stage !== prev) {
+  // BGM切り替え対象をステージに応じて決定（毎回計算する）
+  const targetBGM =
+    stage === 5 ? bgm.Final2 :  // スコア60万以上：最終BGMに切替
+    [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final][stage - 1];
 
-    /* 背景をクロスフェード */
+  // ✅ この時点で prevBGM を記録（currentBGMを上書きする前に）
+  const prevBGM = currentBGM;
+
+  // ✅ currentBGM はその後に上書きする
+  currentBGM = targetBGM;
+
+  // ─ ステージが変わったら ─
+  if (stage !== prev) {
     crossfadeBackground(stage);
 
-    // BGM切り替え対象をステージに応じて決定
-    const targetBGM =
-      stage === 5 ? bgm.Final2 :  // スコア60万以上：最終BGMに切替
-      [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final][stage - 1];
-
-    if (!currentBGM){
-      // 初回だけはボリューム 0→1 のフェードインで開始
-      fadeInBGM(targetBGM, FADE_MS);
-      currentBGM = targetBGM; // ← 初回だけ代入
-    } else if (currentBGM !== targetBGM) {
-      crossfadeBGM(currentBGM, targetBGM, FADE_MS);
-      currentBGM = targetBGM;
+    if (prevBGM && !prevBGM.paused && prevBGM.currentTime > 0) {
+      // 前の曲が再生中ならクロスフェード
+      crossfadeBGM(prevBGM, currentBGM, FADE_MS);
+    } else {
+      // 初回ならフェードイン
+      fadeInBGM(currentBGM, FADE_MS);
     }
 
-    setStageBackgroundSpeed(stage); // ← ここで背景スクロール速度を変更
-    
-     // 🎵 曲名を表示
+    setStageBackgroundSpeed(stage);
+
     const musicTitles = {
       1: "♪Starlight Vanguard",
       2: "♪Brave Ascent",
@@ -948,6 +959,7 @@ function checkStage() {
     showMusicTitle(musicTitles[stage]);
   }
 }
+
 
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nameEntryScreen").style.display = "none";
@@ -1018,7 +1030,7 @@ function startGame() {
   });
 
   stage = 0;
-  currentBGM = null;
+//currentBGM = null;
   checkStage();
 
   // UI 初期化
@@ -1104,7 +1116,7 @@ pauseButton.addEventListener("click", () => {
 });
 
 resumeButton.addEventListener("click", () => {
-  if (gameOver || gamePaused) return;
+  if (gameOver || !gamePaused) return; 
 
   gamePaused = false;
   resumeGame();
@@ -1130,8 +1142,21 @@ document.addEventListener("visibilitychange", () => {
 function resumeGame() {
   const pauseEnd = Date.now(); 
   totalPausedTime += pauseEnd - pauseStart;
-  
-  if (currentBGM) currentBGM.play();
+
+  // ✅ currentBGMがあれば再開（paused状態のもののみ）
+  if (currentBGM) {
+    if (currentBGM.paused) {
+      currentBGM.play().then(() => {
+        console.log("✅ BGM resumed:", currentBGM.src);
+      }).catch(e => {
+        console.warn("🔇 resumeGame: BGM play failed:", e);
+      });
+    } else {
+      console.log("🔁 BGM was already playing:", currentBGM.src);
+    }
+  } else {
+    console.warn("❌ resumeGame: currentBGM is null");
+  }
 
   scoreUpdateInterval = setInterval(updateScore, 100);
   timeUpdateInterval = setInterval(updateTime, 30);
@@ -1969,7 +1994,7 @@ function updateComboDisplay(currentComboCount) {
 
   // ✅ 毎回スタイルを上書き（CSS影響を受けない）
   comboText.style.position = "absolute";
-  comboText.style.top = "80px";           // ← 表示位置を確実に反映
+  comboText.style.top = "450px";           // ← 表示位置を確実に反映
   comboText.style.right = "10px";
   comboText.style.fontSize = "24px";
   comboText.style.fontWeight = "bold";
@@ -2041,7 +2066,7 @@ function finishComboBonus() {
   bonusDiv.style.position = "absolute";
   bonusDiv.style.right = "5%";
   bonusDiv.style.top = "100%";
-  bonusDiv.style.transform = "translateY(0)";
+  bonusDiv.style.transform = "translateY(350px)";
   bonusDiv.style.fontSize = "20px";
   bonusDiv.style.fontWeight = "bold";
   bonusDiv.style.whiteSpace = "pre";
