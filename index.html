@@ -634,8 +634,8 @@
   const levelEl = document.getElementById("level");
   const maxLevel = 7; 
   const expEl = document.getElementById("exp");
-  const normalParryRadius = 56;
-  const PARRY_COOLDOWN = 400; // クールダウン時間 [ms]
+  const normalParryRadius = 55;
+  const PARRY_COOLDOWN = 380; // クールダウン時間 [ms]
   const maxGauge = 3;
   const gameClear = document.getElementById("gameClear");
   const scrollDuration = 120; // 背景スクロール速度（秒）
@@ -1762,29 +1762,32 @@ function activateParry() {
   lastParryTime = Date.now();
 
   seParry.play();
-  setInvincible(350);
+  setInvincible(350); // 通常パリィでも一瞬無敵を付与
 
   parryActive = true;
   justParry = false;
 
-  // 通常パリィエフェクト（半径55px, サイズ110×110）
+  // 通常パリィエフェクト（半径55px, サイズ112×112）
   const effect = document.createElement("img");
   effect.src = "eff_parry.gif";
   effect.style.position = "absolute";
-  effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 55) + "px";
-  effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 55) + "px";
-  effect.style.width = "110px";
-  effect.style.height = "110px";
+  effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 56) + "px";
+  effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 56) + "px";
+  effect.style.width = "112px";
+  effect.style.height = "112px";
   effect.style.pointerEvents = "none";
   effect.style.zIndex = "3";
   game.appendChild(effect);
 
-  // ジャストじゃなかったら後で消す
+  // ジャストじゃなければあとで消す
   setTimeout(() => {
     if (!justParry) effect.remove();
   }, 350);
 
-  setTimeout(() => {
+  // 3フレーム分パリィ判定を持続
+  let frameCount = 0;
+  function checkParryFrame() {
+    frameCount++;
     const pRect = player.getBoundingClientRect();
     const pcx = (pRect.left + pRect.right) / 2;
     const pcy = (pRect.top + pRect.bottom) / 2;
@@ -1798,12 +1801,12 @@ function activateParry() {
       const dy = Math.max(oRect.top - pcy, 0, pcy - oRect.bottom);
       const dist = Math.hypot(dx, dy);
 
-        if (dist <= justParryRadius) {
-          justParry = true;
-          effect.remove(); // 通常パリィエフェクト削除
-          showJustParry();
-          reflectObstacle(obs, true); // 🌈ジャスト反射
-          setInvincible(350);         // 🌈無敵延長
+      if (dist <= justParryRadius) {
+        justParry = true;
+        effect.remove(); // 通常パリィエフェクト削除
+        showJustParry();
+        reflectObstacle(obs, true); // 🌈ジャストパリィ反射
+        setInvincible(200);         // 🌈無敵延長
 
         // ジャストエフェクト表示
         const jSize = 60;
@@ -1818,19 +1821,26 @@ function activateParry() {
         j.style.zIndex = "3";
         game.appendChild(j);
         setTimeout(() => j.remove(), 580);
-        break;
+        return; // 命中したら中断
       } else if (dist <= normalParryRadius) {
         reflectObstacle(obs, false); // 通常反射
-        break;
+        return;
       }
     }
-  }, 70);
 
+    if (frameCount < 5) {
+      requestAnimationFrame(checkParryFrame);
+    }
+  }
+  requestAnimationFrame(checkParryFrame);
+
+  // クールダウン後パリィ解除
   setTimeout(() => {
     parryActive = false;
     justParry = false;
   }, PARRY_COOLDOWN);
 }
+
 
 /* =======================================================
    ▼ ジャストパリィエフェクト表示
