@@ -486,7 +486,6 @@
 
   </style>
 </head>
-
 <body>
 <!-- UIエリア（スコア） → 白枠の外、画面中央上 -->
 <div id="uiTop">
@@ -635,7 +634,8 @@
   const levelEl = document.getElementById("level");
   const maxLevel = 7; 
   const expEl = document.getElementById("exp");
-  const PARRY_COOLDOWN = 450; // クールダウン時間 [ms]
+  const normalParryRadius = 56;
+  const PARRY_COOLDOWN = 400; // クールダウン時間 [ms]
   const maxGauge = 3;
   const gameClear = document.getElementById("gameClear");
   const scrollDuration = 120; // 背景スクロール速度（秒）
@@ -690,6 +690,7 @@
   let timeUpdateInterval;
   let lastScoreUpdateTime = 0;  // 最後にスコアを更新したミリ秒
   let highScore = localStorage.getItem("highScore") || 0;
+  let justParryRadius = 40;  // Lv.1 初期値（最大52まで上昇）
   let parryGauge = 0; 
   let level = 1;
   let exp = 0;
@@ -803,9 +804,6 @@ function crossfadeBGM(fromAudio, toAudio, duration = 1500) {
   toAudio.volume = 0;
   toAudio.currentTime = 0;
 
-  // ✅ 即時に currentBGM を更新（resumeGame に対応させるため）
-  currentBGM = toAudio;
-
   toAudio.play().catch(e => {
     console.warn("🔇 crossfadeBGM: play failed", e);
   });
@@ -914,39 +912,33 @@ function updateBackgroundInstant(stageNum) {
      ステージ判定 &  ビジュアル/BGM 同期クロスフェード
    ────────────────────────────────────────────── */
 function checkStage() {
-  const prev = stage;
+  const prevStage = stage;
 
-  // 通常ステージ（1〜5）を段階的に判定
+  // スコアに応じたステージ更新
   stage =
     score >= 600000 ? 5 :
     score >= 150000 ? 4 :
     score >= 100000 ? 3 :
     score >=  50000 ? 2 : 1;
 
-  // BGM切り替え対象をステージに応じて決定（毎回計算する）
-  const targetBGM =
-    stage === 5 ? bgm.Final2 :  // スコア60万以上：最終BGMに切替
-    [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final][stage - 1];
-
-  // ✅ この時点で prevBGM を記録（currentBGMを上書きする前に）
-  const prevBGM = currentBGM;
-
-  // ✅ currentBGM はその後に上書きする
-  currentBGM = targetBGM;
-
-  // ─ ステージが変わったら ─
-  if (stage !== prev) {
+  if (stage !== prevStage) {
     crossfadeBackground(stage);
+    setStageBackgroundSpeed(stage);
 
-    if (prevBGM && !prevBGM.paused && prevBGM.currentTime > 0) {
-      // 前の曲が再生中ならクロスフェード
-      crossfadeBGM(prevBGM, currentBGM, FADE_MS);
+    const newBGM =
+      stage === 5 ? bgm.Final2 :
+      [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final][stage - 1];
+
+    const oldBGM = currentBGM; // ← 旧曲を一時保存
+
+    // 曲が変わっていればクロスフェード、初回や同一なら fadeIn
+    if (oldBGM && oldBGM !== newBGM && !oldBGM.paused && oldBGM.currentTime > 0) {
+      crossfadeBGM(oldBGM, newBGM, FADE_MS);
     } else {
-      // 初回ならフェードイン
-      fadeInBGM(currentBGM, FADE_MS);
+      fadeInBGM(newBGM, FADE_MS);
     }
 
-    setStageBackgroundSpeed(stage);
+    currentBGM = newBGM; // 最後に更新！
 
     const musicTitles = {
       1: "♪Starlight Vanguard",
@@ -958,7 +950,6 @@ function checkStage() {
     showMusicTitle(musicTitles[stage]);
   }
 }
-
 
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nameEntryScreen").style.display = "none";
@@ -1236,7 +1227,7 @@ function createObstacle() {
     item.classList.add("stage4");
   }
 
-  // ▼ GIF画像を背景に設定（img要素なし）
+  // 表示設定
   const sizeStr = sizeOption;
   const colorInitial = colorClass[0].toUpperCase();
   item.style.backgroundImage = `url(enm_${sizeStr}_${colorInitial}.gif)`;
@@ -1245,23 +1236,17 @@ function createObstacle() {
   item.style.backgroundPosition = "center";
   item.style.pointerEvents = "none";
 
-  // 表示サイズ・ヒットボックス設定
-  if (sizeOption === "small") {
-    item.style.width = "60px";
-    item.style.height = "60px";
-    item.dataset.hitboxW = 60;
-    item.dataset.hitboxH = 60;
-  } else if (sizeOption === "big") {
-    item.style.width = "92px";
-    item.style.height = "92px";
-    item.dataset.hitboxW = 92;
-    item.dataset.hitboxH = 92;
-  } else if (sizeOption === "huge") {
-    item.style.width = "172px";
-    item.style.height = "172px";
-    item.dataset.hitboxW = 172;
-    item.dataset.hitboxH = 172;
-  }
+  // サイズとヒットボックス
+  const sizeData = {
+    small: 60,
+    big: 92,
+    huge: 172
+  };
+  const dimension = sizeData[sizeOption];
+  item.style.width = dimension + "px";
+  item.style.height = dimension + "px";
+  item.dataset.hitboxW = dimension;
+  item.dataset.hitboxH = dimension;
 
   item.style.backgroundColor = "transparent";
   item.dataset.hp = sizeOption === "small" ? 1 : sizeOption === "big" ? 2 : 3;
@@ -1271,7 +1256,7 @@ function createObstacle() {
   item.dataset.color = colorClass;
   item.classList.add("obstacle");
 
-  // 位置設定（40pxグリッド）
+  // 位置設定
   item.style.left = Math.floor(Math.random() * 9) * 40 + "px";
   item.style.top = "0px";
   item.style.position = "absolute";
@@ -1289,20 +1274,6 @@ function createObstacle() {
     const playerRect = hitbox.getBoundingClientRect();
     const itemRect = getAdjustedRect(item);
 
-    // パリィ判定
-    if (parryActive && item.dataset.type === "damage") {
-      if (checkCollision(playerRect, itemRect)) {
-        const isJust = justParry;
-        parryGauge++;
-        if (parryGauge > maxGauge) parryGauge = maxGauge;
-        reflectObstacle(item, isJust);
-        updateUI();
-        clearInterval(fall);
-        return;
-      }
-    }
-
-    // 通常ヒット
     if (checkCollision(playerRect, itemRect)) {
       if (!invincible && !superInvincible) {
         const dmg = parseInt(item.dataset.hp);
@@ -1316,12 +1287,14 @@ function createObstacle() {
       return;
     }
 
-    // 画面外
     if (y > 600) {
       item.remove();
       clearInterval(fall);
     }
   }, 30);
+
+  // 🔄 落下用IDを保存（反射時に clear するため）
+  item.fallInterval = fall;
 }
 
 /** ★ 指定ミリ秒で障害物生成タイマーを再セット */
@@ -1783,57 +1756,56 @@ function updateScore() {
 /* =======================================================
    ▼ パリィ/ジャストパリィ
    ======================================================= */
-   function activateParry() {
-   if (gameOver || isPaused) return;
-  // パリィの連射防止（クールダウンと発動中チェック）
+function activateParry() {
+  if (gameOver || isPaused) return;
   if (parryActive || Date.now() - lastParryTime < PARRY_COOLDOWN) return;
   lastParryTime = Date.now();
 
-  seParry.play();         // 効果音再生
-  setInvincible(380);     // 無敵時間（0.38秒）
+  seParry.play();
+  setInvincible(350);
 
   parryActive = true;
   justParry = false;
 
-  // 通常パリィエフェクト
+  // 通常パリィエフェクト（半径55px, サイズ110×110）
   const effect = document.createElement("img");
   effect.src = "eff_parry.gif";
   effect.style.position = "absolute";
-  effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 45) + "px";
-  effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 45) + "px";
-  effect.style.width = "90px";
-  effect.style.height = "90px";
+  effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 55) + "px";
+  effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 55) + "px";
+  effect.style.width = "110px";
+  effect.style.height = "110px";
   effect.style.pointerEvents = "none";
   effect.style.zIndex = "3";
   game.appendChild(effect);
 
-  // 通常パリィは0.35秒表示 → ジャストでなければ削除
+  // ジャストじゃなかったら後で消す
   setTimeout(() => {
     if (!justParry) effect.remove();
   }, 350);
 
-  // ---------------- ② ジャストパリィ判定 ----------------
   setTimeout(() => {
     const pRect = player.getBoundingClientRect();
     const pcx = (pRect.left + pRect.right) / 2;
     const pcy = (pRect.top + pRect.bottom) / 2;
 
-    document.querySelectorAll(".obstacle").forEach(obs => {
-      const oRect = obs.getBoundingClientRect();
+    for (let i = 0; i < allObstacles.length; i++) {
+      const obs = allObstacles[i];
+      if (!obs || !obs.parentElement || obs.dataset.type !== "damage") continue;
 
-      // プレイヤー中心から障害物のエッジまでの最短距離
+      const oRect = getAdjustedRect(obs);
       const dx = Math.max(oRect.left - pcx, 0, pcx - oRect.right);
       const dy = Math.max(oRect.top - pcy, 0, pcy - oRect.bottom);
       const dist = Math.hypot(dx, dy);
 
-      if (!justParry && dist <= 42) {  // 判定距離：42px以内
-        justParry = true;
+        if (dist <= justParryRadius) {
+          justParry = true;
+          effect.remove(); // 通常パリィエフェクト削除
+          showJustParry();
+          reflectObstacle(obs, true); // 🌈ジャスト反射
+          setInvincible(350);         // 🌈無敵延長
 
-        // eff_parry.gifを削除
-        effect.remove();
-        showJustParry();  // ← ここで呼ぶ
-        
-        // ---------------- ③ eff_just_parry.gif を表示 ----------------
+        // ジャストエフェクト表示
         const jSize = 60;
         const j = document.createElement("img");
         j.src = "eff_just_parry.gif";
@@ -1845,38 +1817,42 @@ function updateScore() {
         j.style.pointerEvents = "none";
         j.style.zIndex = "3";
         game.appendChild(j);
-        setTimeout(() => j.remove(), 600);
+        setTimeout(() => j.remove(), 580);
+        break;
+      } else if (dist <= normalParryRadius) {
+        reflectObstacle(obs, false); // 通常反射
+        break;
       }
-    });
-  }, 100); // 判定タイミング
+    }
+  }, 70);
 
-  // ---------------- ④ クールダウン解除 ----------------
   setTimeout(() => {
     parryActive = false;
     justParry = false;
   }, PARRY_COOLDOWN);
 }
 
-/* ===== helper : eff_just_parry.gif を 0.6s だけ表示 ===== */
+/* =======================================================
+   ▼ ジャストパリィエフェクト表示
+   ======================================================= */
 function showJustParry() {
-  const justParryEffect = document.getElementById("justParryEffect");
-  if (!justParryEffect) return;
+  const j = document.createElement("img");
+  j.src = "eff_just_parry.gif";
+  j.style.position = "absolute";
+  j.style.left = (player.offsetLeft + player.offsetWidth / 2 - 30) + "px";
+  j.style.top = (player.offsetTop + player.offsetHeight / 2 - 30) + "px";
+  j.style.width = "60px";
+  j.style.height = "60px";
+  j.style.pointerEvents = "none";
+  j.style.zIndex = "3";
+  game.appendChild(j);
 
-  // 再生位置調整（中央に表示）
-  justParryEffect.style.display = "block";
-  justParryEffect.style.left = (player.offsetLeft + player.offsetWidth / 2 - justParryEffect.offsetWidth / 2) + "px";
-  justParryEffect.style.top  = (player.offsetTop + player.offsetHeight / 2 - justParryEffect.offsetHeight / 2) + "px";
-
-  // 🔊 SE再生（効果音）
-  if (typeof seJustParry !== "undefined" && seJustParry) {
+  if (seJustParry) {
     seJustParry.currentTime = 0;
     seJustParry.play().catch(e => console.warn("JustParry音再生失敗:", e));
   }
 
-  // 0.5秒後に非表示
-  setTimeout(() => {
-    justParryEffect.style.display = "none";
-  }, 500);
+  setTimeout(() => j.remove(), 580);
 }
 
 /* =======================================================
@@ -2005,7 +1981,7 @@ function updateComboDisplay(currentComboCount) {
   comboText.style.display = "block";
   comboText.textContent = `${cappedCount} Hits!`; // ← 表示にも上限反映
 
-  // ✅ コンボ終了タイマーの制御（300ms後にフィニッシュ処理）
+  // ✅ コンボ終了タイマーの制御（600ms後にフィニッシュ処理）
   if (comboEndTimeout) clearTimeout(comboEndTimeout);
   comboEndTimeout = setTimeout(() => {
     finishComboBonus();
@@ -2149,6 +2125,9 @@ function addExp(amount) {
     levelUps++;
     playerSpeed *= 1.05;
     threshold = level * 200;
+
+    // ✅ レベルアップごとにジャストパリィ判定距離 +2
+    justParryRadius = Math.min(justParryRadius + 2, 52); // Lv1:40 → Lv7:52
   }
 
   // ライフ回復は最後に1回だけまとめて処理
@@ -2207,6 +2186,12 @@ function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
    ▼ 反射処理（反射できる障害物に対して反射を行う）
    ======================================================= */
 function reflectObstacle(obstacle, isRainbow) {
+  // 🛑 元の落下処理を停止
+  if (obstacle.fallInterval) {
+    clearInterval(obstacle.fallInterval);
+    obstacle.fallInterval = null;
+  }
+
   let hp = parseInt(obstacle.dataset.hp);
   obstacle.dataset.type = "reflected";
   obstacle.dataset.hp = hp;
@@ -2216,7 +2201,7 @@ function reflectObstacle(obstacle, isRainbow) {
 
   if (isRainbow) {
     obstacle.classList.add("rainbow");
-    comboReflectedCount++; // 🌈 コンボ反射弾カウント開始
+    comboReflectedCount++;
   }
 
   // 当たり判定拡大
@@ -2234,10 +2219,8 @@ function reflectObstacle(obstacle, isRainbow) {
     }
   }, 500);
 
-  // ✅ 二重削除防止用フラグ
   let removed = false;
 
-  // 🔥 2秒後に強制消滅処理
   setTimeout(() => {
     if (!removed && obstacle && obstacle.parentElement) {
       if (obstacle.classList.contains("rainbow")) {
@@ -2284,7 +2267,7 @@ function reflectObstacle(obstacle, isRainbow) {
 
       let scoreAdd = 0;
       let expAdd = 0;
-      // ✅ 障害物のスコアと経験値
+
       if (stageType === 1 || stageType === 2) {
         scoreAdd = hp2 === 2 ? 1000 : 500;
         expAdd = hp2 === 2 ? 10 : 5;
@@ -2326,7 +2309,7 @@ function reflectObstacle(obstacle, isRainbow) {
 
         if (!comboInProgress && currentComboCount === 0) {
           currentComboCount = 2;
-          comboBonusGiven = false; // ✅ 最初のヒット時に必ずリセット
+          comboBonusGiven = false;
         } else {
           currentComboCount++;
         }
@@ -2796,6 +2779,7 @@ document.addEventListener("visibilitychange", () => {
   // 少し経ったら消えるように（デバッグ用途）
   setTimeout(() => box.remove(), 100);
 }*/
+
 
 </script>
 </body>
