@@ -570,8 +570,10 @@
     <audio id="seParry"><source src="se_parry.mp3" type="audio/mpeg"></audio>
     <audio id="seDodge"><source src="se_dodge.mp3" type="audio/mpeg"></audio>
     <audio id="seBombL"><source src="se_bomb_L.mp3" type="audio/mpeg"></audio>
+    <audio id="seBombS"><source src="se_bomb_S.mp3" type="audio/mpeg"></audio>
     <audio id="seItem"><source src="se_item.mp3" type="audio/mpeg"></audio>
     <audio id="seJustParry"><source src="se_justparry.mp3" type="audio/mpeg"></audio>
+    <audio id="seScream"><source src="se_scream.mp3" type="audio/mpeg"></audio>
     <!-- クリア画面 -->
     <div id="gameClear">
      <div>
@@ -643,9 +645,11 @@
   const restartButton = document.getElementById("restartButton");
   const seParry = document.getElementById("seParry");
   const seBombL = document.getElementById("seBombL");
+  const seBombS = document.getElementById("seBombS");
   const seDodge = document.getElementById("seDodge");
   const seItem = document.getElementById("seItem");
   const seJustParry = document.getElementById("seJustParry");
+  const seScream = document.getElementById("seScream");
   const allObstacles = [];
   const btnLeft  = document.getElementById("btnLeft");
   const btnRight = document.getElementById("btnRight");
@@ -983,7 +987,7 @@ function startGame() {
   const BGM_VOLUME = 0.8;
   const SE_VOLUME  = 0.8;
 
-  [seParry, seDodge, seBombL, seItem, seJustParry].forEach(se => se.volume = SE_VOLUME);
+  [seParry, seDodge, seBombL, seBombS, seItem, seJustParry, seScream].forEach(se => se.volume = SE_VOLUME);
 
   [bgm.Stage1, bgm.Stage2, bgm.Stage3, bgm.Final, bgm.Final2, bgm.Result].forEach(bgm => {
     bgm.dataset.targetVolume = BGM_VOLUME;
@@ -1278,6 +1282,14 @@ function createObstacle() {
       if (!invincible && !superInvincible) {
         const dmg = parseInt(item.dataset.hp);
         lives -= dmg;
+
+        // 🎧 被弾SE再生
+        if (seScream) {
+          const s = seScream.cloneNode(true);
+          s.volume = seScream.volume;
+          s.play().catch(e => console.warn("SE再生失敗:", e));
+        }
+
         if (lives <= 0) endGame();
         setInvincible();
       }
@@ -1784,7 +1796,7 @@ function activateParry() {
     if (!justParry) effect.remove();
   }, 350);
 
-  // 3フレーム分パリィ判定を持続
+  // 5フレーム分パリィ判定を持続
   let frameCount = 0;
   function checkParryFrame() {
     frameCount++;
@@ -1804,24 +1816,10 @@ function activateParry() {
       if (dist <= justParryRadius) {
         justParry = true;
         effect.remove(); // 通常パリィエフェクト削除
-        showJustParry();
         reflectObstacle(obs, true); // 🌈ジャストパリィ反射
         setInvincible(200);         // 🌈無敵延長
-
-        // ジャストエフェクト表示
-        const jSize = 60;
-        const j = document.createElement("img");
-        j.src = "eff_just_parry.gif";
-        j.style.position = "absolute";
-        j.style.left = (player.offsetLeft + player.offsetWidth / 2 - jSize / 2) + "px";
-        j.style.top = (player.offsetTop + player.offsetHeight / 2 - jSize / 2) + "px";
-        j.style.width = jSize + "px";
-        j.style.height = jSize + "px";
-        j.style.pointerEvents = "none";
-        j.style.zIndex = "3";
-        game.appendChild(j);
-        setTimeout(() => j.remove(), 580);
-        return; // 命中したら中断
+        showJustParry();            // 🌈ジャスト演出（エフェクト＋SE）
+        return;
       } else if (dist <= normalParryRadius) {
         reflectObstacle(obs, false); // 通常反射
         return;
@@ -1834,13 +1832,11 @@ function activateParry() {
   }
   requestAnimationFrame(checkParryFrame);
 
-  // クールダウン後パリィ解除
   setTimeout(() => {
     parryActive = false;
     justParry = false;
   }, PARRY_COOLDOWN);
 }
-
 
 /* =======================================================
    ▼ ジャストパリィエフェクト表示
@@ -2152,11 +2148,17 @@ function addExp(amount) {
    ▼ 障害物ダメージ表現
    ======================================================= */
   function applyHitFlash(obstacle) {
-    obstacle.style.filter = "brightness(2)";
-    setTimeout(() => {
-      if (obstacle) obstacle.style.filter = "";
-    }, 150);
-  }
+  if (seBombS) {
+  const s = seBombS.cloneNode(true);
+  s.play().catch(e => console.warn("SE再生失敗:", e));
+}
+
+  obstacle.style.filter = "brightness(2)";
+  setTimeout(() => {
+    if (obstacle) obstacle.style.filter = "";
+  }, 150);
+}
+
 /* =======================================================
    ▼ コリジョン判定
    ======================================================= */
@@ -2345,6 +2347,7 @@ function reflectObstacle(obstacle, isRainbow) {
           other.remove();
         } else {
           other.dataset.hp = hp2 - 1;
+          applyHitFlash(other);  // ← ここを追加
           other.style.opacity = "0.4";
           setTimeout(() => {
             if (other) other.style.opacity = "1";
