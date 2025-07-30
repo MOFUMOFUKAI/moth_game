@@ -749,14 +749,14 @@
   let namePos = 0;
 
   const ratingCoefficients = {
-    "V": 4.0,
-    "SS": 3.6,
-    "S": 3.2,
-    "A": 2.8,
-    "B": 2.4,
-    "C": 2.0,
-    "D": 1.6,
-    "E": 1.2
+    "V": 4.4,
+    "SS": 4.0,
+    "S": 3.6,
+    "A": 3.2,
+    "B": 2.8,
+    "C": 2.4,
+    "D": 2.0,
+    "E": 1.6
   };
 
   const DOUBLE_TAP_MS = 200;    // 0.2 秒以内
@@ -921,9 +921,9 @@ function checkStage() {
   // スコアに応じたステージ更新
   stage =
     score >= 600000 ? 5 :
-    score >= 150000 ? 4 :
-    score >= 100000 ? 3 :
-    score >=  50000 ? 2 : 1;
+    score >= 250000 ? 4 :
+    score >= 150000 ? 3 :
+    score >=  75000 ? 2 : 1;
 
   if (stage !== prevStage) {
     crossfadeBackground(stage);
@@ -1168,10 +1168,10 @@ function resetObstacleSpawn() {
 
   // スコアに応じた出現間隔を定義
   let baseInterval = 800;
-  if (score >= 200000) baseInterval = 400;
-  else if (score >= 150000) baseInterval = 500;
-  else if (score >= 100000) baseInterval = 600;
-  else if (score >= 50000) baseInterval = 700;
+  if (score >= 350000) baseInterval = 400;
+  else if (score >= 250000) baseInterval = 500;
+  else if (score >= 150000) baseInterval = 600;
+  else if (score >= 75000) baseInterval = 700;
 
   console.log(`[resetObstacleSpawn] baseInterval = ${baseInterval}`);
 
@@ -1194,7 +1194,7 @@ function createObstacle() {
 
   // speedScaleの計算
   let speedScale = 1.0;
-  if (score >= 150000) {
+  if (score >= 250000) {
     const additionalScale = Math.min(Math.floor(score / 150000) * 1.2, 7.0);
     speedScale += additionalScale;
   }
@@ -1481,11 +1481,11 @@ function updateStage() {
 
   if (score >= 600000) {
     stage = 5; // ✅ 新ステージ5
-  } else if (score >= 150000) {
+  } else if (score >= 250000) {
     stage = 4;
-  } else if (score >= 100000) {
+  } else if (score >= 150000) {
     stage = 3;
-  } else if (score >=  50000) {
+  } else if (score >=  75000) {
     stage = 2;
   } else {
     stage = 1;
@@ -2383,13 +2383,13 @@ function getRating(score, time, isMillis = false) {
   const timeInSeconds = isMillis ? time / 1000 : time;
   const spt = score / timeInSeconds;
 
-  if (spt >= 4000) return "V";
-  if (spt >= 3600) return "SS";
-  if (spt >= 3200) return "S";
-  if (spt >= 2800) return "A";
-  if (spt >= 2400) return "B";
-  if (spt >= 2000) return "C";
-  if (spt >= 1600) return "D";
+  if (spt >= 4400) return "V";
+  if (spt >= 4000) return "SS";
+  if (spt >= 3600) return "S";
+  if (spt >= 3200) return "A";
+  if (spt >= 2800) return "B";
+  if (spt >= 2400) return "C";
+  if (spt >= 2000) return "D";
   return "E";
 }
 /* =======================================================
@@ -2421,7 +2421,7 @@ function endGame() {
   document.querySelectorAll(".heal").forEach(item => item.remove());
 
   // ゲームオーバー処理
-  if (score < 150000) {
+  if (score < 250000) {
     const gameOverText = document.createElement("h2");
     gameOverText.id = "gameOverText";
     gameOverText.textContent = "Game Over!";
@@ -2585,7 +2585,7 @@ function checkAndRegisterHighScore(score, rating) {
     return;
   }
 
-  if (score < 150000 || !ratingCoefficients[rating]) {
+  if (score < 250000 || !ratingCoefficients[rating]) {
     console.log("❌ スコアが基準未満か、RANK係数が無効。");
     return;
   }
