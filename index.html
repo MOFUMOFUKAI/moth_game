@@ -1166,13 +1166,6 @@ function resetObstacleSpawn() {
     console.log("既存のspawnInterval停止");
   }
 
-  // スコアに応じた出現間隔を定義
-  let baseInterval = 800;
-  if (score >= 350000) baseInterval = 400;
-  else if (score >= 250000) baseInterval = 500;
-  else if (score >= 150000) baseInterval = 600;
-  else if (score >= 75000) baseInterval = 700;
-
   console.log(`[resetObstacleSpawn] baseInterval = ${baseInterval}`);
 
   obstacleSpawnInterval = setInterval(() => {
