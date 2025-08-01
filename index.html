@@ -1158,6 +1158,19 @@ function resumeGame() {
 }
 
 /* =======================================================
+   ▼ スコアによる障害物発生増加
+   ======================================================= */
+function updateObstacleIntervalByScore(score) {
+  const newInterval = Math.max(200, 800 - Math.floor(score / 200000) * 200);
+  if (newInterval !== baseInterval) {
+    const previous = baseInterval;
+    baseInterval = newInterval;
+    console.log(`[スコア更新] score=${score}, baseInterval変更: ${previous} → ${baseInterval}`);
+    resetObstacleSpawn();
+  }
+}
+
+/* =======================================================
    ▼ 障害物作成リセット処理
    ======================================================= */
 function resetObstacleSpawn() {
@@ -1315,18 +1328,6 @@ function setObstacleTimer(interval) {
 function startObstacleGeneration(){
   // 初回起動
   setObstacleTimer(800);
-}
-
-/** ★ スコア更新ごとに呼ぶ（updateScore 内の最後に１行追加すればＯＫ） */
-function updateObstacleIntervalByScore(score) {
-  const newInterval = Math.max(200, 800 - Math.floor(score / 200000) * 200); // ← これが必要！
-  const previousInterval = baseInterval;
-
-  if (newInterval !== baseInterval) {
-    baseInterval = newInterval;
-    console.log(`[スコア更新] score=${score}, baseInterval変更: ${previousInterval} → ${baseInterval}`);
-    resetObstacleSpawn();
-  }
 }
 
 /* =======================================================
@@ -2272,7 +2273,7 @@ function reflectObstacle(obstacle, isRainbow) {
 
       let scoreAdd = 0;
       let expAdd = 0;
-
+     //スコア＆経験値
       if (stageType === 1 || stageType === 2) {
         scoreAdd = hp2 === 2 ? 1000 : 500;
         expAdd = hp2 === 2 ? 10 : 5;
@@ -2281,25 +2282,25 @@ function reflectObstacle(obstacle, isRainbow) {
         expAdd = hp2 === 3 ? 15 : 10;
       } else if (stageType === 4) {
         if (hp2 === 3 && size === "huge" && color === "blue") {
-          scoreAdd = 6000;
-          expAdd = 60;
+          scoreAdd = 5000;
+          expAdd = 50;
         } else if (hp2 === 3) {
-          scoreAdd = 4000;
-          expAdd = 40;
+          scoreAdd = 3500;
+          expAdd = 35;
         } else if (hp2 === 1) {
           scoreAdd = 1500;
           expAdd = 15;
         }
       } else if (stageType >= 5) {
         if (hp2 === 3 && size === "huge" && color === "blue") {
-          scoreAdd = 7000;
+          scoreAdd = 6000;
           expAdd = 70;
         } else if (hp2 === 3) {
-          scoreAdd = 5000;
-          expAdd = 50;
+          scoreAdd = 4000;
+          expAdd = 40;
         } else if (hp2 === 2) {
-          scoreAdd = 3000;
-          expAdd = 30;
+          scoreAdd = 2500;
+          expAdd = 25;
         } else if (hp2 === 1) {
           scoreAdd = 2000;
           expAdd = 20;
