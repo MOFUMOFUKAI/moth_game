@@ -1,5 +1,8 @@
 # BB_R アトラス試験
 
+この文書は初回試験の記録。現在はリネーム後の `enm_big_R_animation.png` を含む敵9種類を反映済み。
+現在の構成・確認結果は `ENEMY-ATLAS-INTEGRATION.md` を参照。
+
 2026-10-12：赤い大型敵のみ、GIFからユーザー作成アトラスへ切替。
 
 - 制作原本：`source-assets/E_enemy/BB/R_128/BB_R_animation.png`

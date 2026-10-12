@@ -8,7 +8,7 @@ const { root } = require('./helpers.cjs');
 
 test('runtime and archived media match their recorded content checksums', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/assets-manifest.json'), 'utf8'));
-  assert.equal(manifest.length, 51);
+  assert.equal(manifest.length, 59);
   for (const item of manifest) {
     const bytes = fs.readFileSync(path.join(root, item.path));
     assert.equal(bytes.length, item.bytes, item.path);
@@ -32,7 +32,6 @@ test('HTML, stylesheet and scripts reference files that exist, with exact filena
   }
   for (let stage = 1; stage <= 5; stage++) existsExact(`assets/images/env_stage${stage}.webp`);
   for (const size of ['small','big','huge']) for (const color of ['R','G','B']) {
-    if (size === 'big' && color === 'R') existsExact('assets/images/BB_R_animation.png');
-    else existsExact(`assets/images/enm_${size}_${color}.gif`);
+    existsExact(`assets/images/enm_${size === 'huge' ? 'Boss' : size}_${color}_animation.png`);
   }
 });

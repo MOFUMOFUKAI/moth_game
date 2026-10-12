@@ -103,7 +103,7 @@
   },
   {
     "original": "enm_big_B.gif",
-    "path": "assets/images/enm_big_B.gif",
+    "path": "source-assets/alternates/enm_big_B.gif",
     "bytes": 475328,
     "sha256": "13b8d9f3453a7ba3334af10a6f40c24a3dcc4b6c0bb485a5adf55f1a7230be69"
   },
@@ -115,7 +115,7 @@
   },
   {
     "original": "enm_big_G.gif",
-    "path": "assets/images/enm_big_G.gif",
+    "path": "source-assets/alternates/enm_big_G.gif",
     "bytes": 481250,
     "sha256": "7eba3bffcfe256bf084e8775d2ba1d8a36de7e864401d83a3fb4248ae7ae0d9e"
   },
@@ -139,7 +139,7 @@
   },
   {
     "original": "enm_huge_B.gif",
-    "path": "assets/images/enm_huge_B.gif",
+    "path": "source-assets/alternates/enm_huge_B.gif",
     "bytes": 268418,
     "sha256": "ce747797868fee482c20b3cc0727a72527842525b012621f36df7b3b11b83ef5"
   },
@@ -151,7 +151,7 @@
   },
   {
     "original": "enm_huge_G.gif",
-    "path": "assets/images/enm_huge_G.gif",
+    "path": "source-assets/alternates/enm_huge_G.gif",
     "bytes": 461959,
     "sha256": "a8f69f6b55624201c7357456489ceed58b4775ceef72f044ea7413ae75b4dc2a"
   },
@@ -163,7 +163,7 @@
   },
   {
     "original": "enm_huge_R.gif",
-    "path": "assets/images/enm_huge_R.gif",
+    "path": "source-assets/alternates/enm_huge_R.gif",
     "bytes": 471589,
     "sha256": "dab92010d936a4822527e4cf2123bce754e3a051193d5d714d7fc0f54e871f24"
   },
@@ -175,7 +175,7 @@
   },
   {
     "original": "enm_small_B.gif",
-    "path": "assets/images/enm_small_B.gif",
+    "path": "source-assets/alternates/enm_small_B.gif",
     "bytes": 74721,
     "sha256": "be958ecb41f0720cbfae1f67ff0d4e5de8819d74153a9641e2f380d26d15570b"
   },
@@ -187,7 +187,7 @@
   },
   {
     "original": "enm_small_G.gif",
-    "path": "assets/images/enm_small_G.gif",
+    "path": "source-assets/alternates/enm_small_G.gif",
     "bytes": 74565,
     "sha256": "df2e57da3b4bbcf11391c06ef48b07cf6a44a0704d9c666622ab99e65b371005"
   },
@@ -199,7 +199,7 @@
   },
   {
     "original": "enm_small_R.gif",
-    "path": "assets/images/enm_small_R.gif",
+    "path": "source-assets/alternates/enm_small_R.gif",
     "bytes": 69290,
     "sha256": "a2905829d72009607e4cbdf0e8ea2ba89b39e4d8e534335bf44ad30790d523e8"
   },
@@ -300,9 +300,57 @@
     "sha256": "3e6159d9e26c074d4fd6db5b7d775768017f791c9793560fce03d5f471276a83"
   },
   {
-    "original": "BB_R_animation.png",
-    "path": "assets/images/BB_R_animation.png",
+    "original": "enm_big_R_animation.png",
+    "path": "assets/images/enm_big_R_animation.png",
     "bytes": 316213,
     "sha256": "45bda5650de296607ac3a283a95bb70ae455e4509ce3546936168edb649a62ae"
+  },
+  {
+    "original": "enm_big_G_animation.png",
+    "path": "assets/images/enm_big_G_animation.png",
+    "bytes": 290857,
+    "sha256": "6d62f11f0f222c9d63ac0b747f80d4cd2fe3e79c1bb32181773506923c2989d5"
+  },
+  {
+    "original": "enm_big_B_animation.png",
+    "path": "assets/images/enm_big_B_animation.png",
+    "bytes": 298440,
+    "sha256": "c9dc4e4ad601d95bab80d8535ffc6744ee2e702b398acec7db198921a75ab439"
+  },
+  {
+    "original": "enm_Boss_R_animation.png",
+    "path": "assets/images/enm_Boss_R_animation.png",
+    "bytes": 255673,
+    "sha256": "8f47dce844834fba42bed30e43937494728d61c123b27db3f8ade6f1b686988b"
+  },
+  {
+    "original": "enm_Boss_G_animation.png",
+    "path": "assets/images/enm_Boss_G_animation.png",
+    "bytes": 208135,
+    "sha256": "542b5f32bb3f889f124a472fd981d601f91e5b70f41e4c5c953bd0acce172129"
+  },
+  {
+    "original": "enm_Boss_B_animation.png",
+    "path": "assets/images/enm_Boss_B_animation.png",
+    "bytes": 281833,
+    "sha256": "296e3f3ba3cfcf7afd6c680a6bedacc0b8830ffa1ecd6c97888f199cf720b7c5"
+  },
+  {
+    "original": "enm_small_R_animation.png",
+    "path": "assets/images/enm_small_R_animation.png",
+    "bytes": 56188,
+    "sha256": "e69de68ee16a3958a580b7205d8048a4b38ebd798c0f00d5d3e475aeeb5cef07"
+  },
+  {
+    "original": "enm_small_B_animation.png",
+    "path": "assets/images/enm_small_B_animation.png",
+    "bytes": 43957,
+    "sha256": "499293c06592a6307dc5a534ba69b1bbd9867d24b36d2625b531cbb11e8a31e1"
+  },
+  {
+    "original": "enm_small_G_animation.png",
+    "path": "assets/images/enm_small_G_animation.png",
+    "bytes": 53203,
+    "sha256": "b2708dd0331761f7baa6022357925cfda30c552c9abece2c9f42960d95b07573"
   }
 ]

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, executablePath: process.env.BROWSER_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  let browser;
   const failures = [];
   const output = path.resolve(__dirname, '../test-results');
   fs.mkdirSync(output, { recursive: true });
@@ -13,12 +13,14 @@ const { chromium } = require('playwright');
       ['desktop', { width: 1000, height: 900 }, false],
       ['mobile', { width: 390, height: 844 }, true],
       ['narrow', { width: 320, height: 740 }, true]
-    ]) {
+    ].filter(([label]) => !process.env.VIEWPORT || label === process.env.VIEWPORT)) {
+      browser = await chromium.launch({ headless: true, executablePath: process.env.BROWSER_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
       const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch });
       const page = await context.newPage();
       page.on('pageerror', error => failures.push(label + ': ' + error.message));
       page.on('response', response => { if (response.status() >= 400) failures.push(label + ': ' + response.status() + ' ' + response.url()); });
       await page.goto(process.env.BASE_URL || 'http://127.0.0.1:4173/');
+      await page.bringToFront();
       await page.screenshot({ path: path.join(output, label + '-title.png') });
       assert.equal(await page.locator('#nameEntryScreen').isVisible(), false);
       const logo = await page.locator('#titleLogo').boundingBox();
@@ -26,6 +28,9 @@ const { chromium } = require('playwright');
       if (touch) await page.locator('#pressToStart').tap(); else await page.keyboard.press('Enter');
       await page.waitForTimeout(900);
       assert.equal(await page.evaluate(() => gameStarted && !gameOver), true);
+      // Headless Chrome can blur a new context while closing the previous one.
+      // Recover through the actual resume button before testing gameplay.
+      if (await page.evaluate(() => isPaused)) await page.locator('#resumeButton').click();
       await page.evaluate(() => { setSuperInvincible(60000); });
       await page.evaluate(() => {
         const random = Math.random;
@@ -34,8 +39,18 @@ const { chromium } = require('playwright');
         Math.random = random;
         window.atlasTrialEnemy = allObstacles[allObstacles.length - 1];
       });
-      await page.waitForFunction(() => window.atlasTrialEnemy.animationFrame > 0);
-      assert.equal(await page.evaluate(() => getComputedStyle(window.atlasTrialEnemy).backgroundImage.includes('BB_R_animation.png')), true);
+      try {
+        await page.waitForFunction(() => window.atlasTrialEnemy.animationFrame > 0, null, { timeout: 5000 });
+      } catch (error) {
+        console.log(label, await page.evaluate(() => ({
+          gameStarted, gameOver, isPaused, hidden: document.hidden, time: gameTime,
+          runtimeTime, frame: window.atlasTrialEnemy.animationFrame,
+          alive: !!window.atlasTrialEnemy.parentElement,
+          animation: window.atlasTrialEnemy.dataset.animation
+        })), failures);
+        throw error;
+      }
+      assert.equal(await page.evaluate(() => getComputedStyle(window.atlasTrialEnemy).backgroundImage.includes('enm_big_R_animation.png')), true);
       assert.equal(await page.evaluate(() => window.atlasTrialEnemy.getBoundingClientRect().width), 92);
       await page.screenshot({ path: path.join(output, label + '-playing.png') });
       await page.locator('#pauseButton').click();
@@ -48,7 +63,7 @@ const { chromium } = require('playwright');
       await page.evaluate(() => { window.atlasTrialEnemy.style.top = '300px'; reflectObstacle(window.atlasTrialEnemy, true); });
       await page.waitForTimeout(90);
       assert.equal(await page.evaluate(() => window.atlasTrialEnemy.dataset.type), 'reflected');
-      assert.equal(await page.evaluate(() => window.atlasTrialEnemy.spriteAnimation === BB_R_ANIMATION), true);
+      assert.equal(await page.evaluate(() => window.atlasTrialEnemy.spriteAnimation === ENEMY_ANIMATIONS['big:red']), true);
       // Exercise the real touch listener and release (the keyboard shares its movement loop).
       if (touch) {
         await page.locator('#btnLeft').dispatchEvent('touchstart');
@@ -80,8 +95,10 @@ const { chromium } = require('playwright');
       await page.screenshot({ path: path.join(output, label + '-replay.png') });
       console.log(label + ': start/pause/resume/input/all stages/ranking/6 replays passed');
       await context.close();
+      await browser.close();
+      browser = null;
     }
     assert.deepEqual(failures, []);
     console.log('No page errors or failed resource requests. Screenshots: ' + output);
-  } finally { await browser.close(); }
+  } finally { if (browser) await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

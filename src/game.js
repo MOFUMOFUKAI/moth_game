@@ -559,11 +559,6 @@ function createObstacle() {
   }
 
   // 表示設定
-  const sizeStr = sizeOption;
-  const colorInitial = colorClass[0].toUpperCase();
-  if (sizeOption !== 'big' || colorClass !== 'red') {
-    item.style.backgroundImage = `url(assets/images/enm_${sizeStr}_${colorInitial}.gif)`;
-  }
   item.style.backgroundSize = "cover";
   item.style.backgroundRepeat = "no-repeat";
   item.style.backgroundPosition = "center";
@@ -573,7 +568,9 @@ function createObstacle() {
   const dimension = OBSTACLE_SIZES[sizeOption];
   item.style.width = dimension + "px";
   item.style.height = dimension + "px";
-  initializeEnemyAnimation(item, sizeOption, colorClass, dimension);
+  if (!initializeEnemyAnimation(item, sizeOption, colorClass, dimension)) {
+    throw new Error('Missing enemy animation: ' + sizeOption + ':' + colorClass);
+  }
   item.dataset.hitboxW = dimension;
   item.dataset.hitboxH = dimension;
 
