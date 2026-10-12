@@ -1,0 +1,485 @@
+* {
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+    body {
+      margin: 0;
+      background: #000;
+      color: white;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;  /* ← 縦方向いっぱいに使う */
+      overflow: hidden;
+    }
+    img, button {
+      -webkit-user-drag: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    #titleScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 10;
+    }
+    #titleLogo {
+      width: 380px;
+      max-width: 90vw;
+      margin-bottom: 20px;
+    }
+    #pressToStart {
+      font-size: 20px;
+      color: #FFD700;
+      animation: blink 2s infinite;
+      font-family: 'monospace';
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    #time {
+      display: none;
+    }
+    #game {
+      position: relative;
+      width: calc(100vw - 4px);
+      height: 150vw;
+      max-width: 400px;
+      max-height: 600px;
+      background: #111;
+      border: 2px solid #fff;
+      overflow: hidden;
+      margin: -80px auto 0; /* ← 上に30px寄せる */
+      z-index: 0;
+    }
+    #player {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      bottom: 10px;
+      left: 180px;
+      background-image: url("../assets/images/chr_moth.gif");
+      background-size: cover;
+      z-index: 2;
+    }
+    #hitbox {
+      position: absolute;
+      width: 35px;
+      height: 35px;
+      bottom: 12px;
+      left: 182px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .obstacle {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: red;
+      z-index: 2;
+    }
+    .obstacle.stage4 {
+      background-color: #555;
+    }
+    .afterimage {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      pointer-events: none;
+      z-index: 2;
+      animation: fade .1s forwards;
+    }
+    .afterimage::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(0, 200, 255, 0.4) 0%, rgba(0, 200, 255, 0.0) 80%);
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(0, 200, 255, 0.3);
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+    @keyframes fade {
+      to { opacity: 0; }
+    }
+    .dodge-flare {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      top: 0;
+      left: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 200, 255, 0.4), rgba(0, 200, 255, 0));
+      pointer-events: none;
+      z-index: 1;
+    }
+    .heal {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      font-size: 28px;
+      color: pink;
+      text-align: center;
+      line-height: 40px;
+      pointer-events: none;
+    }
+    .explosion {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, orange, red, transparent);
+      animation: explode 0.4s ease-out forwards;
+      pointer-events: none;
+    }
+    .rainbow {
+      animation: rainbow 0.5s infinite;
+    }
+    @keyframes explode {
+     0% { opacity: 1; transform: scale(0.5); }
+     100% { opacity: 0; transform: scale(2); }
+    }
+    @keyframes rainbow {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+    .damage-flash {
+      animation: flashWhite 0.15s ease-in-out;
+    }
+    @keyframes flashWhite {
+      0% { filter: brightness(1); }
+      50% { filter: brightness(3); }
+      100% { filter: brightness(1); }
+    }
+   /* スコア（白枠外） */
+    #uiTop {
+      position: relative;
+      width: min(400px, 100vw);
+      margin-bottom: 80px;
+      color: white;
+      font-family: monospace;
+    }
+    #score {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+   /* ハート（ライフ表示）レベル・経験値白枠内左上に表示 */
+    #levelExpRow {
+     position: absolute;
+     top: 8px;
+     right: 6px;
+     font-size: 14px;
+     z-index: 10;
+    }
+    #smartphoneHint {
+     color: white;
+     font-size: 0.85em;
+     margin-top: 10px;
+     line-height: 1.4;
+    }
+    #lives {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 20px;
+      z-index: 5;
+    }
+    #comboText {
+      position: absolute;
+    }
+    #gameClear, #gameOver {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 80px;
+      text-align: center;
+      color: yellow;
+      background: rgba(0, 0, 0, 0.7);
+      font-size: 20px;
+      z-index: 20;
+      pointer-events: none;
+    }
+   #thankYouText {
+     font-size: clamp(18px, 6vw, 32px);  /* ← 画面幅に応じて自動縮小 */
+     margin-bottom: 10px;
+     white-space: nowrap;
+     overflow: hidden;
+     text-overflow: ellipsis;
+     max-width: 100%;
+   }
+    #timeRating {
+      font-size: 30px;
+      margin-bottom: 10px;
+    }
+    #credits {
+      font-size: 16px;
+    }
+    #restartButton {
+      display: none;
+      position: absolute;
+      left: 50%;
+      bottom: 2%; /* ゲーム画面の中央に表示 */
+      transform: translate(-50%, -50%);
+      padding: 8px 16px;
+      font-size: 16px;
+      background-color: #f39c12;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      z-index: 9999;               /* 重なり順を最前面に調整 */
+      cursor: pointer;
+      pointer-events: auto;       /* タッチを確実に受け付ける */
+      touch-action: manipulation; /* ← タップ反応を最適化（特にiOS） */
+    }
+    #touchControls {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;  /* ← 下揃えに変更 */
+      width: min(400px, 100vw);
+      box-sizing: border-box;
+      margin-top: 42px;
+      padding: 0 10px;
+      height: 40px;  /* ← 高さを固定 */
+      position: relative;
+    }
+    #moveInstruction,
+    #parryInstruction {
+      position: absolute;
+      bottom: 65px; /* ← ボタンより上に固定表示 */
+      font-size: 14px;
+      color: #FFD700;
+      font-family: monospace;
+      text-align: center;
+      width: 120px;
+      white-space: nowrap;
+    }
+
+
+    #moveInstruction {
+      left: 20px;
+    }
+    #parryInstruction {
+      right: 60px;
+    }
+    .arrowGroup {
+      display: flex;
+      gap: 30px;
+      margin-left: 30px; /* ← 矢印全体を右にずらす */
+    }
+    .parryGroup {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .control-button {
+      width: 60px;
+      height: 60px;
+    }
+    #btnParry {
+      margin-right: 70px; /* ← 右詰め調整 */
+    }
+
+    #screenFade {
+      position: absolute;
+      top: 0; left: 0;
+      width: 400px;
+      height: 600px;
+      background: #000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .75s ease;
+      z-index: 9;
+    }
+    #background {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: 100% auto;
+      background-repeat: repeat-y;
+      background-position-y: 0px;
+      z-index: 0;
+    }
+    #bgDarkenLayer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.75s ease;
+      z-index: 1;
+    }
+    .obstacle-img {
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+    .score-popup {
+      position: absolute;
+      font-size: 18px;
+      font-weight: bold;
+      font-family: monospace;
+      pointer-events: none;
+      animation: floatUp 0.5s ease-out forwards;
+      z-index: 100;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translateY(0px);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+    }
+
+    /* ▼ ポーズ／再開ボタンの配置・見た目 */
+   #pauseControls {
+     position: absolute;
+     top: -3px;
+     right: 20px;
+     z-index: 15;
+     display: flex;
+     gap: 6px;
+   }
+
+   #pauseButton,
+   #resumeButton {
+     font-size: 18px;
+     background: none;
+     border: none;
+     color: white;
+     cursor: pointer;
+     padding: 2px 6px;
+   }
+
+   /* ポーズ中に中央に表示されるPAUSEテキスト */
+   #pauseOverlay {
+     position: absolute;
+     top: 50%;
+     left: 50%;
+     transform: translate(-50%, -50%);
+     font-size: 36px;
+     color: white;
+     background: rgba(0, 0, 0, 0.6);
+     padding: 10px 30px;
+     border-radius: 10px;
+     display: none;
+     z-index: 999;
+     pointer-events: none;
+   }
+
+  .void-rank {
+    font-size: 28px;
+    color: gold;
+    text-shadow: 0 0 10px gold, 0 0 20px orange;
+    font-weight: bold;
+    animation: glow 1.5s infinite alternate;
+  }
+
+  .void-subtext {
+    font-size: 14px;
+    color: #ccc;
+    margin-top: 5px;
+  }
+
+  @keyframes glow {
+    from { text-shadow: 0 0 5px gold; }
+    to { text-shadow: 0 0 20px gold, 0 0 30px orange; }
+  }
+
+#voidFeathers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+.invincible-orb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: purple;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: rotateAround 1s linear infinite;
+}
+.orb1 { animation-delay: 0s; }
+.orb2 { animation-delay: 0.5s; }
+
+@keyframes rotateAround {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(30px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(30px) rotate(-360deg);
+  }
+}
+
+.feather {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-image: url('../assets/images/eff_feather.png');
+  background-size: cover;
+  opacity: 1;
+  z-index: 99999;
+  pointer-events: none;
+  transform: translate(0, 0) rotate(0deg);
+  animation: featherFly var(--flyTime, 2s) ease-out forwards,
+             featherWobble 3s ease-in-out infinite;
+
+}
+
+@keyframes featherFly {
+  0% {
+    transform: translate(0px, 0px) rotate(var(--startAngle));
+    opacity: 1;
+  }
+  10% {
+    transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 0.3px)) rotate(var(--midAngle));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)) rotate(var(--endAngle));
+    opacity: 0;
+  }
+}
+@keyframes featherWobble {
+  0%, 100% {
+    filter: brightness(1.8);
+  }
+  50% {
+    filter: brightness(2.3);
+  }
+}
+
+    @media (max-width: 360px) {
+      .arrowGroup { margin-left: 4px; gap: 18px; }
+      #btnParry { margin-right: 20px; }
+      #moveInstruction { left: 0; font-size: 12px; }
+      #parryInstruction { right: 12px; font-size: 12px; }
+    }
