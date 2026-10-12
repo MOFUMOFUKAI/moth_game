@@ -60,6 +60,7 @@ function runtimeFrame(now) {
       scrollBackground(scale);
     }
     runGameTimers();
+    if (gameStarted && !gameOver) updateEnemyAnimations();
   }
   requestAnimationFrame(runtimeFrame);
 }

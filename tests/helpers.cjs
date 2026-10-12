@@ -49,7 +49,7 @@ function createGame(options = {}) {
     setTimeout() { throw new Error('Unmanaged timeout'); }, alert() {} };
   context.Math.random = () => 0.5;
   vm.createContext(context);
-  for (const file of ['runtime', 'game', 'audio', 'input', 'ranking']) vm.runInContext(fs.readFileSync(path.join(root, 'src', file + '.js'), 'utf8'), context, { filename: file + '.js' });
+  for (const file of ['runtime', 'animation', 'game', 'audio', 'input', 'ranking']) vm.runInContext(fs.readFileSync(path.join(root, 'src', file + '.js'), 'utf8'), context, { filename: file + '.js' });
   const run = code => vm.runInContext(code, context);
   const frame = delta => { now += delta; const pending = frames.splice(0); pending.forEach(callback => callback(now)); };
   const advance = (duration, interval = 1000 / 60) => { let left = duration; while (left > 0.00001) { const delta = Math.min(interval, left); frame(delta); left -= delta; } };

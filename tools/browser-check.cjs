@@ -27,14 +27,28 @@ const { chromium } = require('playwright');
       await page.waitForTimeout(900);
       assert.equal(await page.evaluate(() => gameStarted && !gameOver), true);
       await page.evaluate(() => { setSuperInvincible(60000); });
+      await page.evaluate(() => {
+        const random = Math.random;
+        Math.random = () => 0.8;
+        createObstacle();
+        Math.random = random;
+        window.atlasTrialEnemy = allObstacles[allObstacles.length - 1];
+      });
+      await page.waitForFunction(() => window.atlasTrialEnemy.animationFrame > 0);
+      assert.equal(await page.evaluate(() => getComputedStyle(window.atlasTrialEnemy).backgroundImage.includes('BB_R_animation.png')), true);
+      assert.equal(await page.evaluate(() => window.atlasTrialEnemy.getBoundingClientRect().width), 92);
       await page.screenshot({ path: path.join(output, label + '-playing.png') });
       await page.locator('#pauseButton').click();
-      const paused = await page.evaluate(() => ({ time: gameTime, score, offset: backgroundOffset, positions: allObstacles.map(o => o.style.top) }));
+      const paused = await page.evaluate(() => ({ time: gameTime, score, offset: backgroundOffset, positions: allObstacles.map(o => o.style.top), frames: allObstacles.map(o => o.style.backgroundPosition) }));
       await page.waitForTimeout(350);
-      const frozen = await page.evaluate(() => ({ time: gameTime, score, offset: backgroundOffset, positions: allObstacles.map(o => o.style.top) }));
+      const frozen = await page.evaluate(() => ({ time: gameTime, score, offset: backgroundOffset, positions: allObstacles.map(o => o.style.top), frames: allObstacles.map(o => o.style.backgroundPosition) }));
       assert.deepEqual(frozen, paused);
       await page.locator('#resumeButton').click();
       await page.waitForFunction(time => gameTime > time, paused.time, { timeout: 5000 });
+      await page.evaluate(() => { window.atlasTrialEnemy.style.top = '300px'; reflectObstacle(window.atlasTrialEnemy, true); });
+      await page.waitForTimeout(90);
+      assert.equal(await page.evaluate(() => window.atlasTrialEnemy.dataset.type), 'reflected');
+      assert.equal(await page.evaluate(() => window.atlasTrialEnemy.spriteAnimation === BB_R_ANIMATION), true);
       // Exercise the real touch listener and release (the keyboard shares its movement loop).
       if (touch) {
         await page.locator('#btnLeft').dispatchEvent('touchstart');

@@ -38,20 +38,20 @@
   {
     "original": "btn_left.png",
     "path": "assets/images/btn_left.png",
-    "bytes": 14165,
-    "sha256": "6a59f81f03164abe65dda5b84a07cce00391e0c75ccf36e8ba364e16cdafa6fe"
+    "bytes": 6383,
+    "sha256": "33098b4bd8a4ba3470a5f30bba18abcbef09cd396c9a8e1d92f86edb73659c82"
   },
   {
     "original": "btn_parry.png",
     "path": "assets/images/btn_parry.png",
-    "bytes": 21655,
-    "sha256": "57da2ae15168066900cd85d7e0993da55af80d208e11df2d2461ee9b785fe64d"
+    "bytes": 7709,
+    "sha256": "1a96b6966a012f19a55c311c2fc9a6590b109490d832721821f668790fda8d9a"
   },
   {
     "original": "btn_right.png",
     "path": "assets/images/btn_right.png",
-    "bytes": 14244,
-    "sha256": "7a4af74a1317a3274ee34484bd8ee81596534480d4777a54a729bab60b751fee"
+    "bytes": 6178,
+    "sha256": "888ec429d811f3eccfb81c17e28e2785c3e5f954d42a22acea208cdb2f51f39a"
   },
   {
     "original": "chr_moth.gif",
@@ -127,7 +127,7 @@
   },
   {
     "original": "enm_big_R.gif",
-    "path": "assets/images/enm_big_R.gif",
+    "path": "source-assets/alternates/enm_big_R.gif",
     "bytes": 474571,
     "sha256": "25349883f66f085395a22604d6898cae8ef354e8fde747e9f117eeff67ea3361"
   },
@@ -298,5 +298,11 @@
     "path": "assets/images/title_mothvoid.webp",
     "bytes": 15222,
     "sha256": "3e6159d9e26c074d4fd6db5b7d775768017f791c9793560fce03d5f471276a83"
+  },
+  {
+    "original": "BB_R_animation.png",
+    "path": "assets/images/BB_R_animation.png",
+    "bytes": 316213,
+    "sha256": "45bda5650de296607ac3a283a95bb70ae455e4509ce3546936168edb649a62ae"
   }
 ]

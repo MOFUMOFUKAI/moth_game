@@ -6,9 +6,9 @@ const crypto = require('node:crypto');
 const vm = require('node:vm');
 const { root } = require('./helpers.cjs');
 
-test('all original images and sounds retain their exact content after relocation', () => {
+test('runtime and archived media match their recorded content checksums', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/assets-manifest.json'), 'utf8'));
-  assert.equal(manifest.length, 50);
+  assert.equal(manifest.length, 51);
   for (const item of manifest) {
     const bytes = fs.readFileSync(path.join(root, item.path));
     assert.equal(bytes.length, item.bytes, item.path);
@@ -17,7 +17,7 @@ test('all original images and sounds retain their exact content after relocation
 });
 
 test('HTML, stylesheet and scripts reference files that exist, with exact filename case', () => {
-  const files = ['index.html', 'css/style.css', ...['runtime','game','audio','input','ranking'].map(name => 'src/' + name + '.js')];
+  const files = ['index.html', 'css/style.css', ...['runtime','animation','game','audio','input','ranking'].map(name => 'src/' + name + '.js')];
   function existsExact(relative) {
     const parts = relative.split('/'); let base = root;
     for (const part of parts) { assert.ok(fs.readdirSync(base).includes(part), relative); base = path.join(base, part); }
@@ -31,5 +31,8 @@ test('HTML, stylesheet and scripts reference files that exist, with exact filena
     }
   }
   for (let stage = 1; stage <= 5; stage++) existsExact(`assets/images/env_stage${stage}.webp`);
-  for (const size of ['small','big','huge']) for (const color of ['R','G','B']) existsExact(`assets/images/enm_${size}_${color}.gif`);
+  for (const size of ['small','big','huge']) for (const color of ['R','G','B']) {
+    if (size === 'big' && color === 'R') existsExact('assets/images/BB_R_animation.png');
+    else existsExact(`assets/images/enm_${size}_${color}.gif`);
+  }
 });

@@ -9,6 +9,7 @@
 index.html                 公開入口（元と同じ場所）
 css/style.css              画面・演出の見た目
 src/runtime.js             更新ループ・ゲーム時間・ポーズ可能なタイマー
+src/animation.js           BB_Rアトラスのコマ表示・再生速度
 src/game.js                状態、開始・終了、敵・アイテム、パリィ、得点
 src/input.js               キーボード・タッチ操作
 src/audio.js               BGM切替、SE、曲名表示
@@ -16,7 +17,7 @@ src/ranking.js             名前入力・ランキング表示
 assets/images/             現在の画像・アニメーション
 assets/audio/bgm/           BGM
 assets/audio/se/            効果音
-source-assets/alternates/  未使用のWebP候補・旧タイトルPNG（保管）
+source-assets/alternates/  未使用のWebP候補・旧タイトルPNG・旧BB_R GIF（保管）
 docs/                      仕様・変更内容・素材調整の案内
 tests/                     不具合の再発を確認するテスト
 tools/                     ローカル確認・公開用ファイル作成
