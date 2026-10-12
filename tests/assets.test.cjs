@@ -8,7 +8,7 @@ const { root } = require('./helpers.cjs');
 
 test('runtime and archived media match their recorded content checksums', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/assets-manifest.json'), 'utf8'));
-  assert.equal(manifest.length, 59);
+  assert.equal(manifest.length, 60);
   for (const item of manifest) {
     const bytes = fs.readFileSync(path.join(root, item.path));
     assert.equal(bytes.length, item.bytes, item.path);

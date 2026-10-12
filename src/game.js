@@ -283,6 +283,7 @@ function startGame() {
   window.removeEventListener("mousedown", startGame);
   window.removeEventListener("keydown", startGame);
   resetGameRuntime();
+  clearAtlasEffects();
   cancelAudioFades();
   stopTouchHold();
   keyPressed = {};
@@ -876,24 +877,16 @@ function activateParry() {
    ▼ ジャストパリィエフェクト表示
    ======================================================= */
 function showJustParry() {
-  const j = document.createElement("img");
-  j.src = "assets/images/eff_just_parry.gif";
-  j.style.position = "absolute";
-  j.style.left = (player.offsetLeft + player.offsetWidth / 2 - 30) + "px";
-  j.style.top = (player.offsetTop + player.offsetHeight / 2 - 30) + "px";
-  j.style.width = "60px";
-  j.style.height = "60px";
-  j.style.pointerEvents = "none";
-  j.style.zIndex = "3";
-  j.dataset.transient = 'true';
-  game.appendChild(j);
+  if (!gameStarted || gameOver || isPaused) return;
+  createAtlasEffect(JUST_PARRY_ANIMATION,
+    player.offsetLeft + player.offsetWidth / 2 - 30,
+    player.offsetTop + player.offsetHeight / 2 - 30, 60, 580);
 
   if (seJustParry) {
     seJustParry.currentTime = 0;
     seJustParry.play().catch(e => console.warn("JustParry音再生失敗:", e));
   }
 
-  setGameTimeout(() => j.remove(), 580);
 }
 
 /* =======================================================
@@ -1408,6 +1401,7 @@ function endGame() {
   gameOver = true;
   isPaused = false;
   gameTimers.clear();
+  clearAtlasEffects();
   comboWatcherStarted = false;
   stopTouchHold();
   keyPressed = {};

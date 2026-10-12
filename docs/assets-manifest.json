@@ -79,7 +79,7 @@
   },
   {
     "original": "eff_just_parry.gif",
-    "path": "assets/images/eff_just_parry.gif",
+    "path": "source-assets/alternates/eff_just_parry.gif",
     "bytes": 52176,
     "sha256": "c669672dbd590ad9db8e602da665b7264bd4776abaa12da462b52288b74bf227"
   },
@@ -352,5 +352,11 @@
     "path": "assets/images/enm_small_G_animation.png",
     "bytes": 53203,
     "sha256": "b2708dd0331761f7baa6022357925cfda30c552c9abece2c9f42960d95b07573"
+  },
+  {
+    "original": "eff_just_parry_animation.png",
+    "path": "assets/images/eff_just_parry_animation.png",
+    "bytes": 84553,
+    "sha256": "2664fe2d10073cdd3661f94c6598e3ab629f9e904bede5fc2d00abd41fa9f153"
   }
 ]

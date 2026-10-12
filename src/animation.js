@@ -23,6 +23,11 @@ const ENEMY_ANIMATIONS = Object.freeze({
 function initializeEnemyAnimation(enemy, size, color, dimension) {
   const animation = ENEMY_ANIMATIONS[size + ':' + color];
   if (!animation) return false;
+  initializeAtlasElement(enemy, animation, dimension);
+  return true;
+}
+
+function initializeAtlasElement(enemy, animation, dimension) {
   enemy.spriteAnimation = animation;
   enemy.animationStartedAt = runtimeTime;
   enemy.animationDimension = dimension;
@@ -30,7 +35,6 @@ function initializeEnemyAnimation(enemy, size, color, dimension) {
   enemy.style.backgroundImage = 'url(' + animation.image + ')';
   enemy.style.backgroundSize = (dimension * animation.columns) + 'px ' + (dimension * animation.rows) + 'px';
   updateEnemyAnimation(enemy);
-  return true;
 }
 
 function enemyAnimationFrame(animation, elapsed) {
@@ -55,4 +59,45 @@ function updateEnemyAnimation(enemy) {
 
 function updateEnemyAnimations() {
   for (const enemy of allObstacles) updateEnemyAnimation(enemy);
+}
+
+// Preserve the actual GIF playback order, including its second partial loop
+// before the original 580ms display lifetime expires.
+const JUST_PARRY_ANIMATION = makeEnemyAnimation(
+  'eff_just_parry_animation.png', 4, 2, 128,
+  [0, 1, 3, 4, 6, 2], [80, 80, 80, 40, 80, 80]
+);
+const atlasEffects = new Set();
+
+function createAtlasEffect(animation, x, y, dimension, duration) {
+  const effect = document.createElement('div');
+  effect.className = 'atlas-effect';
+  effect.dataset.transient = 'true';
+  Object.assign(effect.style, {
+    position: 'absolute', left: x + 'px', top: y + 'px',
+    width: dimension + 'px', height: dimension + 'px',
+    pointerEvents: 'none', zIndex: '3', backgroundRepeat: 'no-repeat'
+  });
+  initializeAtlasElement(effect, animation, dimension);
+  game.appendChild(effect);
+  atlasEffects.add(effect);
+  effect.removalTimer = setGameTimeout(() => removeAtlasEffect(effect), duration);
+  return effect;
+}
+
+function removeAtlasEffect(effect) {
+  clearGameTimer(effect.removalTimer);
+  atlasEffects.delete(effect);
+  effect.remove();
+}
+
+function clearAtlasEffects() {
+  for (const effect of atlasEffects) removeAtlasEffect(effect);
+}
+
+function updateAtlasEffects() {
+  for (const effect of atlasEffects) {
+    if (!effect.parentElement) removeAtlasEffect(effect);
+    else updateEnemyAnimation(effect);
+  }
 }
