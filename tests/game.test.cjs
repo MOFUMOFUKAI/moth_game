@@ -98,3 +98,29 @@ test('corrupt or unavailable storage cannot prevent startup; names render as tex
   g.run('displayHighScores()'); assert.equal(g.elements.get('scoreList').children[1].textContent, '1. <img：400000（SS）');
   assert.equal(g.run('getRating(100,0)'), 'E');
 });
+
+test('all items survive normal and rainbow reflected shots and can still be collected', () => {
+  for (const type of ['heart', 'goldHeart', 'lemon', 'grape']) {
+    for (const rainbow of [false, true]) {
+      const g = createGame();
+      g.run(`startGame(); Math.random=()=>0; lives=1;
+        ${type === 'lemon' ? 'lives=maxLives;' : ''}
+        ${type === 'grape' ? 'level=maxLevel;' : ''}
+        createObstacle(); reflectObstacle(allObstacles[0], ${rainbow});
+        spawnFallingItem('${type}');
+        const pickup=game.querySelector('.heal');
+        const fallId=itemFallTimers[0];
+        allObstacles[0].getBoundingClientRect=()=>pickup.getBoundingClientRect();
+        gameTimers.get(fallId).callback();`);
+      assert.equal(g.run('pickup.parentElement===game'), true, `${type}/${rainbow} survives`);
+      assert.equal(g.run('gameTimers.has(fallId)'), true);
+      g.run('pickup.getBoundingClientRect=()=>hitbox.getBoundingClientRect(); gameTimers.get(fallId).callback();');
+      assert.equal(g.run('pickup.parentElement'), null, `${type}/${rainbow} collected`);
+      assert.equal(g.run('gameTimers.has(fallId)'), false);
+      if (type === 'heart') assert.equal(g.run('lives'), 2);
+      if (type === 'goldHeart') assert.equal(g.run('lives'), g.run('maxLives'));
+      if (type === 'lemon') assert.equal(g.run('score'), 10000);
+      if (type === 'grape') { assert.equal(g.run('score'), 15000); assert.equal(g.run('superInvincible'), true); }
+    }
+  }
+});

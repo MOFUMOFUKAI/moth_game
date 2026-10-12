@@ -717,19 +717,6 @@ function spawnFallingItem(type) {
       return;
     }
 
-    // 反射障害物との衝突
-    for (let obs of allObstacles) {
-      if (obs.dataset.type === "reflected") {
-        const obsRect = obs.getBoundingClientRect();
-        if (checkCollision(itemRect, obsRect)) {
-          el.remove();
-          clearFall();
-          createExplosion(centerX, centerY);
-          return;
-        }
-      }
-    }
-
     // 画面外に出たら削除
     if (y > game.clientHeight) {
       el.remove();
