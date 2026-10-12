@@ -300,6 +300,7 @@ function startGame() {
   invincible = false;
   superInvincible = false;
   isDodging = false;
+  resetMothAnimation();
   speedBoost = false;
   parryActive = false;
   justParry = false;

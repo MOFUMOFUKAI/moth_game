@@ -63,6 +63,7 @@ function runtimeFrame(now) {
     if (gameStarted && !gameOver) {
       updateEnemyAnimations();
       updateAtlasEffects();
+      updateMothAnimation();
     }
   }
   requestAnimationFrame(runtimeFrame);

@@ -101,3 +101,43 @@ function updateAtlasEffects() {
     else updateEnemyAnimation(effect);
   }
 }
+
+const MOTH_ANIMATION = Object.freeze({
+  image: 'assets/images/chr_moym_animation.png', columns: 4, rows: 4,
+  cellSize: 256, frameDuration: 100, sequence: Object.freeze([0,1,2,3,2,1])
+});
+let mothDodgeDirection = 0;
+
+function mothAnimationFrame() {
+  const holdingDirection = keyPressed.ArrowLeft || keyPressed.ArrowRight;
+  const direction = holdingDirection ?
+    Number(!!keyPressed.ArrowRight) - Number(!!keyPressed.ArrowLeft) :
+    isDodging ? mothDodgeDirection : 0;
+  return {
+    row: direction < 0 ? 1 : direction > 0 ? 2 : 0,
+    col: MOTH_ANIMATION.sequence[Math.floor(runtimeTime / MOTH_ANIMATION.frameDuration) % MOTH_ANIMATION.sequence.length]
+  };
+}
+
+function applyMothFrame(element, dimension, row, col) {
+  element.style.backgroundImage = 'url(' + MOTH_ANIMATION.image + ')';
+  element.style.backgroundSize = `${dimension * MOTH_ANIMATION.columns}px ${dimension * MOTH_ANIMATION.rows}px`;
+  element.style.backgroundPosition = `${-col * dimension}px ${-row * dimension}px`;
+  element.style.backgroundRepeat = 'no-repeat';
+}
+
+function updateMothAnimation() {
+  const { row, col } = mothAnimationFrame();
+  if (player.mothRow === row && player.mothCol === col) return;
+  player.mothRow = row;
+  player.mothCol = col;
+  player.dataset.animationRow = String(row);
+  player.dataset.animationCol = String(col);
+  applyMothFrame(player, 48, row, col);
+}
+
+function resetMothAnimation() {
+  mothDodgeDirection = 0;
+  player.mothRow = player.mothCol = undefined;
+  updateMothAnimation();
+}

@@ -9,7 +9,7 @@
 index.html                 公開入口（元と同じ場所）
 css/style.css              画面・演出の見た目
 src/runtime.js             更新ループ・ゲーム時間・ポーズ可能なタイマー
-src/animation.js           敵9種類・ジャストパリィのアトラス再生
+src/animation.js           敵9種類・蛾・ジャストパリィのアトラス再生
 src/game.js                状態、開始・終了、敵・アイテム、パリィ、得点
 src/input.js               キーボード・タッチ操作
 src/audio.js               BGM切替、SE、曲名表示
@@ -54,4 +54,5 @@ CSSだけ、画像の移動だけなど一部分のみを公開しないこと�
 変更内容と確認範囲は [docs/MAINTENANCE-v1.2.6.md](docs/MAINTENANCE-v1.2.6.md)。
 敵アトラスの現在の構成は [docs/ENEMY-ATLAS-INTEGRATION.md](docs/ENEMY-ATLAS-INTEGRATION.md)。
 ジャストパリィ演出は [docs/JUST-PARRY-ATLAS.md](docs/JUST-PARRY-ATLAS.md)。
+蛾のドット絵と左右移動は [docs/MOTH-ATLAS.md](docs/MOTH-ATLAS.md)。
 素材の調整案は [docs/ASSET-GUIDE.md](docs/ASSET-GUIDE.md)。

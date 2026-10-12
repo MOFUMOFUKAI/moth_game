@@ -55,7 +55,7 @@
   },
   {
     "original": "chr_moth.gif",
-    "path": "assets/images/chr_moth.gif",
+    "path": "source-assets/alternates/chr_moth.gif",
     "bytes": 90023,
     "sha256": "aceeb363484aa7acdc8764ec4b95a1a0c573120495e90a7e192ec7f33f6b7d92"
   },
@@ -358,5 +358,11 @@
     "path": "assets/images/eff_just_parry_animation.png",
     "bytes": 84553,
     "sha256": "2664fe2d10073cdd3661f94c6598e3ab629f9e904bede5fc2d00abd41fa9f153"
+  },
+  {
+    "original": "chr_moym_animation.png",
+    "path": "assets/images/chr_moym_animation.png",
+    "bytes": 784884,
+    "sha256": "b789af86cc221a4acf94f4aa04e760ba38f0a13e37fbbb7570c932ff455bd29d"
   }
 ]

@@ -64,8 +64,11 @@
       height: 48px;
       bottom: 10px;
       left: 180px;
-      background-image: url("../assets/images/chr_moth.gif");
-      background-size: cover;
+      background-image: url("../assets/images/chr_moym_animation.png");
+      background-size: 192px 192px;
+      background-position: 0 0;
+      background-repeat: no-repeat;
+      image-rendering: pixelated;
       z-index: 2;
     }
     #hitbox {
@@ -88,6 +91,7 @@
       background-color: #555;
     }
     .afterimage {
+      image-rendering: pixelated;
       position: absolute;
       width: 40px;
       height: 40px;

@@ -8,7 +8,9 @@ function isRightKey(key) {
 // 回避移動
 function dodge(dir) {
   if (!gameStarted || gameOver || isPaused || isDodging) return;
+  mothDodgeDirection = dir === 'ArrowLeft' ? -1 : 1;
   isDodging = true;
+  updateMothAnimation();
   speedBoost = true;
   playSound(seDodge);
   setInvincible(300);
@@ -46,8 +48,8 @@ function spawnAfterImage(xPos){
   img.className = "afterimage";
   img.style.left = xPos + "px";
   img.style.bottom = "10px";
-  img.style.backgroundImage = 'url("assets/images/chr_moth.gif")';
-  img.style.backgroundSize = 'cover';
+  const { row, col } = mothAnimationFrame();
+  applyMothFrame(img, 40, row, col);
   game.appendChild(img);
   setGameTimeout(() => img.remove(), 100);
 }
