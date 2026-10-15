@@ -12,6 +12,25 @@ const { chromium } = require('playwright');
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(process.env.BASE_URL || 'http://127.0.0.1:4173/');
       if (touch) await page.locator('#pressToStart').tap(); else await page.keyboard.press('Enter');
+      await page.evaluate(() => { clearGameTimer(obstacleSpawnInterval); });
+      await page.waitForTimeout(850);
+      if (touch) await page.locator('#btnParry').tap(); else await page.keyboard.press('f');
+      await page.evaluate(() => {
+        window.normalEffect = [...atlasEffects].find(effect => effect.dataset.animation === 'eff_parry');
+        createExplosion(140,220,500,false,false,5);
+        window.bombEffect = [...atlasEffects].find(effect => effect.dataset.animation === 'eff_bomb_L');
+      });
+      assert.equal(await page.evaluate(() => window.normalEffect.getBoundingClientRect().width), 112);
+      assert.equal(await page.evaluate(() => window.bombEffect.getBoundingClientRect().width), 100);
+      await page.waitForFunction(() => window.normalEffect.animationFrame > 0 && window.bombEffect.animationFrame > 0);
+      await page.locator('#pauseButton').click();
+      const effectFrames = await page.evaluate(() => [window.normalEffect.animationFrame, window.bombEffect.animationFrame]);
+      await page.waitForTimeout(450);
+      assert.deepEqual(await page.evaluate(() => [window.normalEffect.animationFrame, window.bombEffect.animationFrame]), effectFrames);
+      assert.equal(await page.evaluate(() => atlasEffects.size), 2);
+      await page.screenshot({ path: path.join(output, 'parry-bomb-' + label + '.png') });
+      await page.locator('#resumeButton').click();
+      await page.waitForFunction(() => atlasEffects.size === 0);
       await page.evaluate(() => {
         clearGameTimer(obstacleSpawnInterval);
         const random = Math.random; Math.random = () => 0; createObstacle(); Math.random = random;
@@ -21,7 +40,8 @@ const { chromium } = require('playwright');
         window.parryTarget.style.top = (player.offsetTop - 20) + 'px';
       });
       if (touch) await page.locator('#btnParry').tap(); else await page.keyboard.press('f');
-      await page.waitForFunction(() => atlasEffects.size === 1);
+      await page.waitForFunction(() => atlasEffects.size === 1 &&
+        [...atlasEffects].some(effect => effect.dataset.animation === 'eff_just_parry'));
       await page.evaluate(() => { window.testEffect = [...atlasEffects][0]; });
       assert.equal(await page.evaluate(() => window.parryTarget.rainbowTracked), true);
       assert.equal(await page.evaluate(() => window.testEffect.getBoundingClientRect().width), 60);
@@ -43,7 +63,7 @@ const { chromium } = require('playwright');
       await page.locator('#restartButton').click();
       assert.equal(await page.evaluate(() => atlasEffects.size), 0);
       assert.deepEqual(errors, []);
-      console.log(label + ': real just-parry/size/pause/overlap/expiry/end/replay passed');
+      console.log(label + ': normal parry/explosion/just-parry/size/pause/overlap/expiry/end/replay passed');
     } finally { await browser.close(); }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

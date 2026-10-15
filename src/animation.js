@@ -1,7 +1,7 @@
 // Timing and playback order are taken from the original GIFs.
 function makeEnemyAnimation(file, columns, rows, cellSize, sequence, durations) {
   return Object.freeze({
-    id: file.replace('_animation.png', ''),
+    id: file.replace(/_(?:animation|anim)\.png$/, ''),
     image: 'assets/images/' + file, columns, rows, cellSize,
     sequence: Object.freeze(sequence), durations: Object.freeze(durations),
     loopDuration: durations.reduce((sum, duration) => sum + duration, 0)
@@ -66,6 +66,14 @@ function updateEnemyAnimations() {
 const JUST_PARRY_ANIMATION = makeEnemyAnimation(
   'eff_just_parry_animation.png', 4, 2, 128,
   [0, 1, 3, 4, 6, 2], [80, 80, 80, 40, 80, 80]
+);
+const PARRY_ANIMATION = makeEnemyAnimation(
+  'eff_parry_anim.png', 3, 3, 128,
+  [0,1,2,3,4,5,6,7,8], [120,120,80,120,80,120,80,120,40]
+);
+const BOMB_L_ANIMATION = makeEnemyAnimation(
+  'eff_bomb_L_anim.png', 6, 2, 128,
+  [0,1,2,3,4,5,6,7,8,9,10,11], [80,80,80,40,80,80,40,80,80,40,80,40]
 );
 const atlasEffects = new Set();
 

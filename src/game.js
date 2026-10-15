@@ -814,22 +814,9 @@ function activateParry() {
   justParry = false;
 
   // 通常パリィエフェクト（半径55px, サイズ112×112）
-  const effect = document.createElement("img");
-  effect.src = "assets/images/eff_parry.gif";
-  effect.style.position = "absolute";
-  effect.style.left = (player.offsetLeft + player.offsetWidth / 2 - 56) + "px";
-  effect.style.top = (player.offsetTop + player.offsetHeight / 2 - 56) + "px";
-  effect.style.width = "112px";
-  effect.style.height = "112px";
-  effect.style.pointerEvents = "none";
-  effect.style.zIndex = "3";
-  effect.dataset.transient = 'true';
-  game.appendChild(effect);
-
-  // ジャストじゃなければあとで消す
-  setGameTimeout(() => {
-    if (!justParry) effect.remove();
-  }, 350);
+  const effect = createAtlasEffect(PARRY_ANIMATION,
+    player.offsetLeft + player.offsetWidth / 2 - 56,
+    player.offsetTop + player.offsetHeight / 2 - 56, 112, 350);
 
   // 5フレーム分パリィ判定を持続
   let frameCount = 0;
@@ -851,7 +838,7 @@ function activateParry() {
 
       if (dist <= justParryRadius) {
         justParry = true;
-        effect.remove(); // 通常パリィエフェクト削除
+        removeAtlasEffect(effect); // 通常パリィエフェクト削除
         reflectObstacle(obs, true); // 🌈ジャストパリィ反射
         setInvincible(200);         // 🌈無敵延長
         showJustParry();            // 🌈ジャスト演出（エフェクト＋SE）
@@ -935,25 +922,15 @@ function setSuperInvincible(duration = 15000) {
 function createExplosion(x, y, scoreValue = 0, isJust = false, noExplosion = false, expValue = 0) {
   // ---------- 爆発エフェクト ----------
   if (!noExplosion) {
-    const explosion = document.createElement("img");
-    explosion.src = "assets/images/eff_bomb_L.gif";
-    explosion.style.position = "absolute";
-    explosion.style.left = x + "px";  // ← 余計な +20 削除
-    explosion.style.top  = y + "px";
-    explosion.style.width = "100px";
-    explosion.style.height = "100px";
+    const explosion = createAtlasEffect(BOMB_L_ANIMATION, x, y, 100, 400);
     explosion.style.transform = "translate(-50%, -50%)";
-    explosion.style.pointerEvents = "none";
     explosion.style.zIndex = "10";
-    explosion.dataset.transient = 'true';
-  game.appendChild(explosion);
       // 🔊 爆発音を再生
   if (seBombL) {
     seBombL.currentTime = 0;
     playSound(seBombL);
   }
 
-    setGameTimeout(() => explosion.remove(), 400);
   }
 
   // ---------- スコア + 経験値表示 ----------

@@ -61,7 +61,7 @@
   },
   {
     "original": "eff_bomb_L.gif",
-    "path": "assets/images/eff_bomb_L.gif",
+    "path": "source-assets/alternates/eff_bomb_L.gif",
     "bytes": 69518,
     "sha256": "8722a98f233c3cc56fd3ea21f7f39c3b009a48900db85eda40851d8ba517591f"
   },
@@ -91,7 +91,7 @@
   },
   {
     "original": "eff_parry.gif",
-    "path": "assets/images/eff_parry.gif",
+    "path": "source-assets/alternates/eff_parry.gif",
     "bytes": 42188,
     "sha256": "b24a379c915e292e35c227f8838a7209bade68c8884c4a67d25b56b75fcbd332"
   },
@@ -364,5 +364,17 @@
     "path": "assets/images/chr_moym_animation.png",
     "bytes": 784884,
     "sha256": "b789af86cc221a4acf94f4aa04e760ba38f0a13e37fbbb7570c932ff455bd29d"
+  },
+  {
+    "original": "eff_parry_anim.png",
+    "path": "assets/images/eff_parry_anim.png",
+    "bytes": 64880,
+    "sha256": "5df8ec4f19c570eaca37d53abb0ff5084ddb546c77d697cd7d44ed972eb2bfb1"
+  },
+  {
+    "original": "eff_bomb_L_anim.png",
+    "path": "assets/images/eff_bomb_L_anim.png",
+    "bytes": 42238,
+    "sha256": "fb1dbc36dc26951ce9313bcfd41a1157924f6d3e0cc3d55e7654b62eb76b0dd9"
   }
 ]

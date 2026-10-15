@@ -52,3 +52,44 @@ test('successful parry triggers the atlas through the actual collision path', ()
   assert.equal(g.run('enemy.rainbowTracked'), true);
   assert.equal(g.run('atlasEffects.size'), 1);
 });
+
+test('normal parry and explosion keep position, size, layering and paused lifetime', () => {
+  const g = createGame();
+  g.run('startGame(); activateParry(); createExplosion(160,200,500,false,false,10); const [parry,bomb]=[...atlasEffects]');
+  assert.equal(g.run('parry.dataset.animation'), 'eff_parry');
+  assert.equal(g.run('parry.style.width'), '112px');
+  assert.equal(g.run('parry.style.backgroundSize'), '336px 336px');
+  assert.equal(g.run('bomb.dataset.animation'), 'eff_bomb_L');
+  assert.equal(g.run('bomb.style.width'), '100px');
+  assert.equal(g.run('bomb.style.left'), '160px');
+  assert.equal(g.run('bomb.style.top'), '200px');
+  assert.equal(g.run('bomb.style.zIndex'), '10');
+  assert.equal(g.run('bomb.style.transform'), 'translate(-50%, -50%)');
+  assert.equal(g.run('game.querySelectorAll("[data-transient]").some(el=>el.textContent==="+500\\nEXP+10")'), true);
+  g.advance(130); assert.equal(g.run('parry.animationFrame'), 1); assert.equal(g.run('bomb.animationFrame'), 1);
+  g.run('pauseGame()'); g.advance(3000);
+  assert.equal(g.run('atlasEffects.size'), 2); assert.equal(g.run('parry.animationFrame'), 1);
+  g.run('resumeGame()'); g.advance(230);
+  assert.equal(g.run('parry.parentElement'), null); assert.equal(g.run('atlasEffects.size'), 1);
+  g.advance(50); assert.equal(g.run('atlasEffects.size'), 0);
+});
+
+test('both atlas timelines retain all GIF frame durations and hidden explosions stay hidden', () => {
+  const g = createGame();
+  for (const [config,durations] of [
+    ['PARRY_ANIMATION',[120,120,80,120,80,120,80,120,40]],
+    ['BOMB_L_ANIMATION',[80,80,80,40,80,80,40,80,80,40,80,40]]
+  ]) {
+    let elapsed=0;
+    durations.forEach((duration,frame) => {
+      assert.equal(g.run(`enemyAnimationFrame(${config},${elapsed})`), frame);
+      assert.equal(g.run(`enemyAnimationFrame(${config},${elapsed+duration-1})`), frame);
+      elapsed += duration;
+    });
+    assert.equal(g.run(`enemyAnimationFrame(${config},${elapsed})`), 0);
+  }
+  g.run('startGame(); createExplosion(100,100,100,false,true)');
+  assert.equal(g.run('atlasEffects.size'), 0);
+  g.run('activateParry(); createExplosion(100,100); endGame(); startGame()');
+  assert.equal(g.run('atlasEffects.size'), 0);
+});
