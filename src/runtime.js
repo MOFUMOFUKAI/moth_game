@@ -53,17 +53,23 @@ function runtimeFrame(now) {
   runtimePreviousTime = now;
   if (!isPaused) {
     runtimeTime += elapsed;
-    if (gameStarted && !gameOver) {
-      gameTime += elapsed;
-      const scale = Math.min(elapsed, 50) / (1000 / 60);
-      continuousMoveLoop(scale);
-      scrollBackground(scale);
-    }
-    runGameTimers();
-    if (gameStarted && !gameOver) {
-      updateEnemyAnimations();
-      updateAtlasEffects();
-      updateMothAnimation();
+    const playing = gameStarted && !gameOver;
+    if (playing) beginCollisionFrame();
+    try {
+      if (gameStarted && !gameOver) {
+        gameTime += elapsed;
+        const scale = Math.min(elapsed, 50) / (1000 / 60);
+        continuousMoveLoop(scale);
+        scrollBackground(scale);
+      }
+      runGameTimers();
+      if (gameStarted && !gameOver) {
+        updateEnemyAnimations();
+        updateAtlasEffects();
+        updateMothAnimation();
+      }
+    } finally {
+      if (playing) endCollisionFrame();
     }
   }
   requestAnimationFrame(runtimeFrame);

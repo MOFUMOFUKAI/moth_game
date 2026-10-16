@@ -600,7 +600,7 @@ function createObstacle() {
     y += fallSpeed;
     item.style.top = y + "px";
 
-    const playerRect = hitbox.getBoundingClientRect();
+    const playerRect = getCollisionRect(hitbox);
     const itemRect = getAdjustedRect(item);
 
     if (checkCollision(playerRect, itemRect)) {
@@ -624,7 +624,7 @@ function createObstacle() {
       return;
     }
 
-    if (y > game.clientHeight) {
+    if (y > getGameHeight()) {
       removeObstacle(item);
       clearGameTimer(fall);
     }
@@ -701,9 +701,9 @@ function spawnFallingItem(type) {
     y += itemData.speed;
     el.style.top = y + "px";
 
-    const itemRect = el.getBoundingClientRect();
-    const playerRect = hitbox.getBoundingClientRect();
-    const gameRect = game.getBoundingClientRect();
+    const itemRect = getCollisionRect(el);
+    const playerRect = getCollisionRect(hitbox);
+    const gameRect = getCollisionRect(game);
     const centerX = itemRect.left + itemRect.width / 2 - gameRect.left;
     const centerY = itemRect.top + itemRect.height / 2 - gameRect.top;
 
@@ -720,7 +720,7 @@ function spawnFallingItem(type) {
     }
 
     // 画面外に出たら削除
-    if (y > game.clientHeight) {
+    if (y > getGameHeight()) {
       el.remove();
       clearFall();
     }
@@ -823,7 +823,7 @@ function activateParry() {
   function checkParryFrame() {
     if (!gameStarted || gameOver || isPaused) return;
     frameCount++;
-    const pRect = player.getBoundingClientRect();
+    const pRect = getCollisionRect(player);
     const pcx = (pRect.left + pRect.right) / 2;
     const pcy = (pRect.top + pRect.bottom) / 2;
 
@@ -1081,24 +1081,37 @@ function finishComboBonus() {
 /* =======================================================
    ▼ UIの更新処理
    ======================================================= */
+let uiDirty = false;
+
 function updateUI() {
+  uiDirty = true;
+  // Gameplay state changes immediately; only its presentation is batched.
+  if (!collisionFrame) flushUI();
+}
+
+function flushUI() {
+  if (!uiDirty) return;
+  uiDirty = false;
+  const setText = (element, text) => {
+    if (element.textContent !== text) element.textContent = text;
+  };
   // ハートの数表示（負のrepeat対策あり）
-  livesEl.textContent =
+  setText(livesEl,
     "❤️".repeat(Math.max(0, lives)) +
-    "🖤".repeat(Math.max(0, maxLives - lives));
+    "🖤".repeat(Math.max(0, maxLives - lives)));
 
   // レベル表示
-  levelEl.textContent = "Lv. " + level;
+  setText(levelEl, "Lv. " + level);
 
   // 経験値表示
   if (level < maxLevel) {
-    expEl.textContent = `EXP: ${exp} / ${level * 200}`;
+    setText(expEl, `EXP: ${exp} / ${level * 200}`);
   } else {
-    expEl.textContent = `EXP: MAX`;
+    setText(expEl, `EXP: MAX`);
   }
 
   // スコア表示
-  scoreEl.textContent = "スコア: " + score;
+  setText(scoreEl, "スコア: " + score);
 }
 
 /* =======================================================
@@ -1156,8 +1169,84 @@ function addExp(amount) {
 /* =======================================================
    ▼ 障害物コリジョンサイズ変更（高さ）
    ======================================================= */
+// Read layout together before any movement writes. Within this frame, translate
+// those measured rectangles by the current CSS positions, including catch-up
+// physics steps and movement occurring before the parry callbacks.
+let collisionFrame = null;
+let collisionGrid = null;
+
+function measureCollisionGrid() {
+  // Engines round CSS coordinates to different subpixel grids. Match that grid
+  // so a target exactly on a parry boundary does not move across the boundary.
+  const probe = document.createElement('div');
+  probe.style.position = 'absolute';
+  probe.style.visibility = 'hidden';
+  probe.style.height = '0px';
+  game.appendChild(probe);
+  const widths = [1, 1.01, 1.02, 1.03].map(width => {
+    probe.style.width = width + 'px';
+    return probe.getBoundingClientRect().width;
+  });
+  probe.remove();
+  const step = Math.min(...widths.slice(1).map((width, i) => width - widths[i]).filter(delta => delta > 0));
+  const units = Math.round(1 / step);
+  const round = Math.abs(widths[1] - Math.round(1.01 * units) / units) < 0.000001;
+  collisionGrid = Number.isFinite(units) && units > 0 ? { units, round } : { units: 0 };
+}
+
+function collisionCoordinate(value) {
+  const number = parseFloat(value) || 0;
+  if (!collisionGrid?.units) return number;
+  const scaled = number * collisionGrid.units;
+  return (collisionGrid.round ? Math.round(scaled) : Math.trunc(scaled)) / collisionGrid.units;
+}
+
+function collisionPosition(elem) {
+  return { x: collisionCoordinate(elem.style.left), y: collisionCoordinate(elem.style.top) };
+}
+
+function beginCollisionFrame() {
+  const rects = new Map();
+  const targets = allObstacles.filter(elem => elem.dataset.type === 'damage');
+  targets.push(...game.querySelectorAll('.heal'));
+  // Reflected shots use numeric swept collision already. With no targets left,
+  // avoid forcing a style update just to measure unused rectangles.
+  if (targets.length === 0) {
+    collisionFrame = { rects, height: null };
+    return;
+  }
+  if (!collisionGrid) measureCollisionGrid();
+  for (const elem of [game, player, hitbox, ...targets]) {
+    if (!elem.parentElement) continue;
+    rects.set(elem, { rect: elem.getBoundingClientRect(), ...collisionPosition(elem) });
+  }
+  collisionFrame = { rects, height: game.clientHeight };
+}
+
+function endCollisionFrame() {
+  collisionFrame = null;
+  flushUI();
+}
+
+function getCollisionRect(elem) {
+  const measured = collisionFrame?.rects.get(elem);
+  // Newly spawned elements and input handlers outside the frame use live layout.
+  if (!measured) return elem.getBoundingClientRect();
+  const position = collisionPosition(elem);
+  const dx = position.x - measured.x;
+  const dy = position.y - measured.y;
+  const rect = measured.rect;
+  return { left: rect.left + dx, right: rect.right + dx,
+    top: rect.top + dy, bottom: rect.bottom + dy,
+    width: rect.width, height: rect.height };
+}
+
+function getGameHeight() {
+  return collisionFrame?.height ?? game.clientHeight;
+}
+
 function getAdjustedRect(elem) {
-  const rect = elem.getBoundingClientRect();
+  const rect = getCollisionRect(elem);
   const newHeight = rect.height * 0.7;
 
   return {
