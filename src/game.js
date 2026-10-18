@@ -12,6 +12,7 @@
   const expEl = document.getElementById("exp");
   const normalParryRadius = 55;
   const PARRY_COOLDOWN = 380; // クールダウン時間 [ms]
+  const ENABLE_RAINBOW_VISUAL = false; // 比較用：trueで虹色演出を戻す。ジャストの性能は変更しない。
   const gameClear = document.getElementById("gameClear");
 
   const timeRatingEl = document.getElementById("timeRating");
@@ -1281,7 +1282,7 @@ function reflectObstacle(obstacle, isRainbow) {
   let vy = -obstacleSpeed * (isRainbow ? 1.5 : 1);
 
   if (isRainbow) {
-    obstacle.classList.add("rainbow");
+    if (ENABLE_RAINBOW_VISUAL) obstacle.classList.add("rainbow");
     comboReflectedCount++;
     obstacle.rainbowTracked = true;
   }
