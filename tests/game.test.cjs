@@ -14,13 +14,13 @@ test('replay keeps one animation loop and resets time, level radius and transien
 
 test('automatic pause freezes enemies, reflected shots, invulnerability, score and time', () => {
   const g = createGame(); g.run('startGame(); createObstacle(); allObstacles[0].style.top="300px"; reflectObstacle(allObstacles[0], true); setSuperInvincible(1000)');
-  const y = g.run('allObstacles[0].style.top');
+  const y = g.run('getSpriteY(allObstacles[0])');
   g.document.hidden = true; g.dispatch(g.document, 'visibilitychange'); g.advance(5000);
   assert.equal(g.run('isPaused'), true); assert.equal(g.run('gameTime'), 0);
-  assert.equal(g.run('allObstacles[0].style.top'), y); assert.equal(g.run('superInvincible'), true);
+  assert.equal(g.run('getSpriteY(allObstacles[0])'), y); assert.equal(g.run('superInvincible'), true);
   g.document.hidden = false; g.dispatch(g.document, 'visibilitychange');
   assert.equal(g.run('isPaused'), true); g.run('resumeGame()'); g.advance(100);
-  assert.ok(Math.abs(g.run('gameTime') - 100) < 0.01); assert.notEqual(g.run('allObstacles[0].style.top'), y);
+  assert.ok(Math.abs(g.run('gameTime') - 100) < 0.01); assert.notEqual(g.run('getSpriteY(allObstacles[0])'), y);
 });
 
 test('enemy disposal releases list, timers and rainbow count exactly once', () => {

@@ -12,7 +12,7 @@
   const expEl = document.getElementById("exp");
   const normalParryRadius = 55;
   const PARRY_COOLDOWN = 380; // クールダウン時間 [ms]
-  const ENABLE_RAINBOW_VISUAL = false; // 比較用：trueで虹色演出を戻す。ジャストの性能は変更しない。
+  const ENABLE_RAINBOW_VISUAL = true; // 虹色の見た目のみを切り替える。ジャストの性能は変更しない。
   const gameClear = document.getElementById("gameClear");
 
   const timeRatingEl = document.getElementById("timeRating");
@@ -594,12 +594,12 @@ function createObstacle() {
   allObstacles.push(item);
 
   let y = 0;
-  const fall = setGameInterval(() => {
+  const fall = setGameFrameUpdate((elapsed = 30) => {
     if (gameOver || !item.parentElement) return clearGameTimer(fall);
     if (isPaused) return;
     item.previousY = y;
-    y += fallSpeed;
-    item.style.top = y + "px";
+    y += fallSpeed * elapsed / 30;
+    setSpriteY(item, y);
 
     const playerRect = getCollisionRect(hitbox);
     const itemRect = getAdjustedRect(item);
@@ -629,7 +629,7 @@ function createObstacle() {
       removeObstacle(item);
       clearGameTimer(fall);
     }
-  }, 30);
+  });
 
   // 🔄 落下用IDを保存（反射時に clear するため）
   item.fallInterval = fall;
@@ -695,12 +695,12 @@ function spawnFallingItem(type) {
 
   let y = 0;
 
-  const fall = setGameInterval(() => {
+  const fall = setGameFrameUpdate((elapsed = 30) => {
     if (gameOver || !el.parentElement) return clearFall();
     if (isPaused) return;
 
-    y += itemData.speed;
-    el.style.top = y + "px";
+    y += itemData.speed * elapsed / 30;
+    setSpriteY(el, y);
 
     const itemRect = getCollisionRect(el);
     const playerRect = getCollisionRect(hitbox);
@@ -725,7 +725,7 @@ function spawnFallingItem(type) {
       el.remove();
       clearFall();
     }
-  }, 30);
+  });
 
   itemFallTimers.push(fall);
 
@@ -1203,7 +1203,10 @@ function collisionCoordinate(value) {
 }
 
 function collisionPosition(elem) {
-  return { x: collisionCoordinate(elem.style.left), y: collisionCoordinate(elem.style.top) };
+  const anchor = parseFloat(elem.style.top) || 0;
+  const translated = elem.motionAnchor === anchor && Number.isFinite(elem.motionY);
+  return { x: collisionCoordinate(elem.style.left),
+    y: collisionCoordinate(elem.style.top) + (translated ? elem.motionOffset : 0) };
 }
 
 function beginCollisionFrame() {
@@ -1219,7 +1222,8 @@ function beginCollisionFrame() {
   if (!collisionGrid) measureCollisionGrid();
   for (const elem of [game, player, hitbox, ...targets]) {
     if (!elem.parentElement) continue;
-    rects.set(elem, { rect: elem.getBoundingClientRect(), ...collisionPosition(elem) });
+    rects.set(elem, { rect: elem.getBoundingClientRect(), ...collisionPosition(elem),
+      previousY: getSpriteY(elem) });
   }
   collisionFrame = { rects, height: game.clientHeight };
 }
@@ -1278,7 +1282,7 @@ function reflectObstacle(obstacle, isRainbow) {
   obstacle.dataset.type = "reflected";
   obstacle.dataset.hp = hp;
 
-  let y = parseInt(obstacle.style.top);
+  let y = Math.trunc(getSpriteY(obstacle));
   let vy = -obstacleSpeed * (isRainbow ? 1.5 : 1);
 
   if (isRainbow) {
@@ -1312,12 +1316,12 @@ function reflectObstacle(obstacle, isRainbow) {
     }
   }, 2000);
 
-  const move = setGameInterval(() => {
+  const move = setGameFrameUpdate((elapsed = 30) => {
     if (gameOver || !obstacle.parentElement) return clearGameTimer(move);
     if (isPaused) return;
     const previousY = y;
-    y += vy;
-    obstacle.style.top = y + "px";
+    y += vy * elapsed / 30;
+    setSpriteY(obstacle, y);
 
 
     const selfW = parseFloat(obstacle.dataset.hitboxW || originalW);
@@ -1329,12 +1333,13 @@ function reflectObstacle(obstacle, isRainbow) {
       if (other === obstacle || !other.parentElement || other.dataset.type !== "damage") continue;
 
       const otherX = parseInt(other.style.left);
-      const otherY = parseInt(other.style.top);
+      const otherY = getSpriteY(other);
       const otherW = parseFloat(other.dataset.hitboxW || other.offsetWidth);
       const otherH = parseFloat(other.dataset.hitboxH || other.offsetHeight);
 
       // Relative motion prevents fast shots from jumping through falling enemies.
-      const previousRelativeY = previousY - (other.previousY ?? otherY);
+      const targetPreviousY = collisionFrame?.rects.get(other)?.previousY ?? other.previousY ?? otherY;
+      const previousRelativeY = previousY - targetPreviousY;
       const relativeY = selfY - otherY;
       const overlapX = selfX < otherX + otherW && selfX + selfW > otherX;
       const crossedY = Math.min(previousRelativeY, relativeY) < otherH &&
@@ -1438,7 +1443,7 @@ function reflectObstacle(obstacle, isRainbow) {
       removed = true;
       clearGameTimer(move);
     }
-  }, 30);
+  }, 1);
   obstacle.moveInterval = move;
 }
 

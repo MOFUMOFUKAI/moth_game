@@ -61,6 +61,23 @@ function updateEnemyAnimations() {
   for (const enemy of allObstacles) updateEnemyAnimation(enemy);
 }
 
+// Keep the collision coordinate separate from presentation. Moving with a
+// transform avoids relaying out the page on every frame.
+function getSpriteY(element) {
+  const anchor = parseFloat(element.style.top) || 0;
+  return element.motionAnchor === anchor && Number.isFinite(element.motionY)
+    ? element.motionY : anchor;
+}
+
+function setSpriteY(element, y) {
+  element.motionAnchor = parseFloat(element.style.top) || 0;
+  element.motionY = y;
+  // Stable subpixel positions avoid float-matrix drift at collision boundaries.
+  // This rounds presentation only; elapsed-distance physics remains unrounded.
+  element.motionOffset = Math.round((y - element.motionAnchor) * 64) / 64;
+  element.style.transform = `translate3d(0, ${element.motionOffset}px, 0)`;
+}
+
 // Preserve the actual GIF playback order, including its second partial loop
 // before the original 580ms display lifetime expires.
 const JUST_PARRY_ANIMATION = makeEnemyAnimation(

@@ -9,15 +9,20 @@ const { chromium }=require('playwright');
   await page.locator('#pressToStart').click();
   const result=await page.evaluate(()=>{
    clearGameTimer(obstacleSpawnInterval);createObstacle();const enemy=allObstacles[0];clearGameTimer(enemy.fallInterval);
-   let maxError=0,mismatches=0,total=0;
-   for(const size of [60,92,172])for(const x of [-40.7,10,80.1,140.7])for(const y of [-100.3,30,100.3,250.9]) {
+   let maxError=0,mismatches=0,total=0,example=null;
+   for(const transformed of [false,true])for(const size of [60,92,172])for(const x of [-40.7,10,80.1,140.7])for(const y of [-100.3,30,100.3,250.9]) {
+    enemy.motionY=undefined;enemy.motionAnchor=undefined;enemy.style.transform='';
     enemy.style.width=enemy.style.height=size+'px';enemy.style.left=x+'px';enemy.style.top=y+'px';
     beginCollisionFrame();
     for(const dy of [0,2,5.1,5.7,22.5,45,90]) {
-     enemy.style.top=(y+dy)+'px';player.style.left=(x+dy)+'px';hitbox.style.left=(x+dy+4)+'px';
+     if(transformed)setSpriteY(enemy,y+dy);else enemy.style.top=(y+dy)+'px';
+     player.style.left=(x+dy)+'px';hitbox.style.left=(x+dy+4)+'px';
      for(const el of [enemy,player,hitbox]) {
       const actual=el.getBoundingClientRect(),cached=getCollisionRect(el);
-      for(const key of ['left','right','top','bottom','width','height'])maxError=Math.max(maxError,Math.abs(actual[key]-cached[key]));
+      for(const key of ['left','right','top','bottom','width','height']){
+       const error=Math.abs(actual[key]-cached[key]);maxError=Math.max(maxError,error);
+       if(error>0.000001&&!example)example={key,actual:actual.toJSON(),cached,x,y,dy,transformed,game:game.getBoundingClientRect().toJSON()};
+      }
      }
      const native=enemy.getBoundingClientRect(),cached=getAdjustedRect(enemy);
      for(const px of [native.left-55,native.left-40,native.left,native.right+40,native.right+55]) {
@@ -28,7 +33,7 @@ const { chromium }=require('playwright');
     }
     endCollisionFrame();
    }
-   return {maxError,mismatches,total};
+   return {maxError,mismatches,total,example};
   });
   console.log(width,result);assert.ok(result.maxError<0.000001);assert.equal(result.mismatches,0);
   await context.close();

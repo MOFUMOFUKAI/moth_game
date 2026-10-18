@@ -18,6 +18,14 @@ function setGameInterval(callback, delay) {
   return id;
 }
 
+// Motion runs once per displayed frame, rather than replaying several stale
+// positions after a stall. The callback receives elapsed gameplay milliseconds.
+function setGameFrameUpdate(callback, phase = 0) {
+  const id = nextGameTimerId++;
+  gameTimers.set(id, { callback, frame: true, phase, previousTime: runtimeTime });
+  return id;
+}
+
 function clearGameTimer(id) {
   gameTimers.delete(id);
 }
@@ -29,14 +37,16 @@ function resetGameRuntime() {
 }
 
 function runGameTimers() {
-  for (const [id, timer] of [...gameTimers]) {
+  const timers = [...gameTimers];
+  for (const [id, timer] of timers) {
+    if (timer.frame) continue;
     if (!gameTimers.has(id) || timer.due > runtimeTime) continue;
     if (!timer.interval) {
       gameTimers.delete(id);
       timer.callback();
       continue;
     }
-    // Preserve the old 30ms physics cadence, with bounded catch-up after a stall.
+    // Bounded catch-up for non-motion periodic work (score, popups, etc.).
     let steps = 0;
     while (gameTimers.has(id) && timer.due <= runtimeTime && steps++ < 8) {
       timer.due += timer.interval;
@@ -45,6 +55,16 @@ function runGameTimers() {
     if (gameTimers.has(id) && timer.due <= runtimeTime) {
       timer.due = runtimeTime + timer.interval;
     }
+  }
+  // Falling enemies (phase 0) must update before reflected shots (phase 1),
+  // including enemies spawned after a shot was reflected.
+  const motion = timers.filter(([, timer]) => timer.frame)
+    .sort((a, b) => a[1].phase - b[1].phase);
+  for (const [id, timer] of motion) {
+    if (!gameTimers.has(id)) continue;
+    const elapsed = runtimeTime - timer.previousTime;
+    timer.previousTime = runtimeTime;
+    if (elapsed > 0) timer.callback(elapsed);
   }
 }
 

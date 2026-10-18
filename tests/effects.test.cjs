@@ -46,6 +46,7 @@ test('overlapping just-parries own independent clocks and leave no replay refere
 test('successful parry triggers the atlas through the actual collision path', () => {
   const g = createGame();
   g.run(`startGame(); createObstacle(); const enemy=allObstacles[0];
+    clearGameTimer(enemy.fallInterval); enemy.style.top='500px';
     enemy.getBoundingClientRect=()=>player.getBoundingClientRect(); activateParry();`);
   g.advance(20);
   assert.equal(g.run('enemy.dataset.type'), 'reflected');

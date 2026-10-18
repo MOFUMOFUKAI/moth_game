@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createGame } = require('./helpers.cjs');
 
-test('catch-up physics uses current positions without requesting layout after every movement', () => {
+test('multiple motion updates use current positions without requesting layout after every movement', () => {
   const g = createGame();
   g.run(`startGame(); clearGameTimer(obstacleSpawnInterval); createObstacle();
     const enemy = allObstacles[0]; let reads = 0;

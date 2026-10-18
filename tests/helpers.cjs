@@ -25,7 +25,9 @@ function createGame(options = {}) {
       querySelector(selector) { return this.querySelectorAll(selector)[0] || null; },
       closest(selector) { let child = this; while (child) { if (matches(child, selector)) return child; child = child.parentElement; } return null; },
       getBoundingClientRect() { const width = parseFloat(this.style.width) || this.offsetWidth; const height = parseFloat(this.style.height) || this.offsetHeight;
-        const left = parseFloat(this.style.left) || 0; const top = this.id === 'player' ? 542 : this.id === 'hitbox' ? 553 : parseFloat(this.style.top) || 0;
+        const left = parseFloat(this.style.left) || 0; const anchor = parseFloat(this.style.top) || 0;
+        const top = this.id === 'player' ? 542 : this.id === 'hitbox' ? 553 :
+          this.motionAnchor === anchor && Number.isFinite(this.motionY) ? anchor + this.motionOffset : anchor;
         return { left, top, width, height, right: left + width, bottom: top + height }; },
       play() { this.paused = false; return Promise.resolve(); }, pause() { this.paused = true; }, load() {}, cloneNode() { return element('audio'); }
     };
